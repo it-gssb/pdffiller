@@ -18,21 +18,23 @@ public class TextBuilder {
       MustacheFactory mf = new DefaultMustacheFactory();
       Mustache mustache = 
             mf.compile(new StringReader(message), "message.text");
-      StringWriter stringWriter = new StringWriter();
-      mustache.execute(stringWriter, new MustacheMapDecorator(row))
-              .flush();
-      return stringWriter.toString();
-    }
+      try (StringWriter stringWriter = new StringWriter()) {
+         mustache.execute(stringWriter, new MustacheMapDecorator(row))
+                 .flush();
+         return stringWriter.toString();
+      }
+   }
    
    public String substitute(final File template,
                             final Map<String, String> row) throws IOException {
       FileReader templateReader =  new FileReader(template);
       MustacheFactory mf = new DefaultMustacheFactory();
       Mustache mustache = mf.compile(templateReader, "message.file");
-      StringWriter stringWriter = new StringWriter();
-      mustache.execute(stringWriter, new MustacheMapDecorator(row))
-              .flush();
-      return stringWriter.toString();
+      try (StringWriter stringWriter = new StringWriter()) {
+	     mustache.execute(stringWriter, new MustacheMapDecorator(row))
+	             .flush();
+	     return stringWriter.toString();
+      }
    }
       
 }

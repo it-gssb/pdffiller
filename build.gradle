@@ -128,7 +128,7 @@ test {
 }
 
  tasks.withType(FindBugs) {
-     ignoreFailures = true
+     ignoreFailures = false
      excludeFilter = file('findbugs_exclusions.xml')
      reports {
          xml.enabled = false

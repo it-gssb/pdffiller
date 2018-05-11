@@ -158,7 +158,7 @@ public abstract class AbstractConfiguration {
       for (String entry : list) {
          String[] pair = entry.split(":", 2);
          if (pair.length != 2) {
-            String name = pair != null && !pair[0].isEmpty() ? pair[0] : "undefined";
+            String name = !pair[0].isEmpty() ? pair[0] : "undefined";
             String msg = String.format(ERROR_MSG_6, key, name);
             logger.error(msg);
             throw new UnrecoverableException(msg);

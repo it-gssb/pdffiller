@@ -246,11 +246,7 @@ public class AppProperties extends AbstractConfiguration {
 
    public Map<String, String> getChoices(final String choiceName) {
       String key = CHOICE + "." + Objects.requireNonNull(choiceName) + "." + CHOICE_SELECT;
-      Map<String, String> value = getPropertyMap(key);
-      if (value == null) {
-         value = Collections.emptyMap();
-      }
-      return Collections.unmodifiableMap(value);
+      return Collections.unmodifiableMap(getPropertyMap(key));
    }
 
    //
@@ -259,9 +255,6 @@ public class AppProperties extends AbstractConfiguration {
    
    public Map<String, String> getMappings(final String templateKey) {
       Map<String, String> value = getPropertyMap(MAPPINGS_BASE + "." + Objects.requireNonNull(templateKey));
-      if (value == null) {
-         value = Collections.emptyMap();
-      }
       return Collections.unmodifiableMap(value);
    }
    

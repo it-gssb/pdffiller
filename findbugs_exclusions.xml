@@ -3,6 +3,22 @@
       <Class name="org.gssb.pdffiller.BulkNotificator"/>
       <Bug code="Dm" />
    </Match>
+   <Match>
+      <Class name="org.gssb.pdffiller.text.TextBuilder"/>
+      <Bug code="Dm" />
+   </Match>
+   <Match>
+      <Class name="org.gssb.pdffiller.text.TextBuilder"/>
+      <Bug code="OBL" />
+   </Match>
+   <Match>
+      <Class name="org.gssb.pdffiller.BulkNotificator"/>
+      <Bug code="NP" />
+   </Match>
+   <Match>
+      <Class name="org.gssb.pdffiller.template.Template"/>
+      <Bug code="NP" />
+   </Match>
 
    <Match>
       <Class name="~.*\.*Test"/>

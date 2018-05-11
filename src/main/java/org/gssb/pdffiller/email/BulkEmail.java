@@ -288,27 +288,29 @@ public class BulkEmail {
 
   private String getTextFromMimeMultipart(final MimeMultipart mimeMultipart)
           throws MessagingException, IOException{
-      String result = "";
+      StringBuffer sb = new StringBuffer();
       int count = mimeMultipart.getCount();
       for (int i = 0; i < count; i++) {
           BodyPart bodyPart = mimeMultipart.getBodyPart(i);
           if (bodyPart.getContent() instanceof MimeMultipart){
-             result = result + getTextFromMimeMultipart((MimeMultipart)bodyPart.getContent());
+             sb.append(getTextFromMimeMultipart((MimeMultipart)bodyPart.getContent()));
           } else if (bodyPart.getContent() instanceof InputStream) {
              if (Part.ATTACHMENT.equalsIgnoreCase(bodyPart.getDisposition()) ||
                  bodyPart.getFileName()!=null) {
-                 result = result + EOL + bodyPart.getFileName();
+            	 sb.append(EOL)
+            	   .append(bodyPart.getFileName());
             } else {
                 return "";
             }
           } else if (bodyPart.isMimeType("text/plain")) {
-              result = result + EOL + bodyPart.getContent();
+	        	 sb.append(EOL)
+	        	   .append(bodyPart.getContent());
           } else if (bodyPart.isMimeType("text/html")) {
-              String html = (String) bodyPart.getContent();
-              result = result + EOL + html;
+              sb.append(EOL)
+                .append((String) bodyPart.getContent());
           }
       }
-      return result;
+      return sb.toString();
    }
    
    private String renderMessage(final Message message) {

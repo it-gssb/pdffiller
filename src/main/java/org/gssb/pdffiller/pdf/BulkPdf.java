@@ -27,7 +27,7 @@ import org.gssb.pdffiller.template.Template;
 
 public class BulkPdf {
    
-   private class Target {
+   private static class Target {
       private final Template template;
       private final String   baseFileName;
       
