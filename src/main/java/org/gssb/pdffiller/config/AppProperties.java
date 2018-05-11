@@ -55,6 +55,8 @@ public class AppProperties extends AbstractConfiguration {
    private final static String EMAIL_SUBJECT_MESSAGE        = "email.subject";
    private final static String EMAIL_BODY_MESSAGE_FILE      = "email.body_file";
    
+   private final static String FILE_NAME_TEMPLATE           = "file.name_template";
+   
    private final static String TEMPLATE                     = "template";
    
    private final static String CHOICE                       = "choice";
@@ -212,6 +214,18 @@ public class AppProperties extends AbstractConfiguration {
    
    public String getEmailBodyFile() {
       return getMandatoryProperty(EMAIL_BODY_MESSAGE_FILE);
+   }
+   
+   //
+   // File Name Template
+   //
+   
+   public String getFileNameTemplate() {
+      String value = getProperty(FILE_NAME_TEMPLATE);
+      if (value==null) {
+         value = "{{$BaseName}}";
+      }
+      return value;
    }
    
    //

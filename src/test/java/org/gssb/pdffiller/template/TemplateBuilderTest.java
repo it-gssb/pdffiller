@@ -39,7 +39,7 @@ public class TemplateBuilderTest {
       
       assertEquals("Template2", choices.get(0).getSelectionColumn());
       assertTrue(choices.get(0).getBaseName().isPresent());
-      assertEquals("Certificate - ", choices.get(0).getBaseName().get());
+      assertEquals("Certificate", choices.get(0).getBaseName().get());
       
       assertEquals(5, choices.get(0).getKeys().size());
       assertTrue(choices.get(0).getKeys().contains("gold"));

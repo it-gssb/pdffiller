@@ -4,6 +4,7 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -24,6 +25,9 @@ import org.gssb.pdffiller.excel.RowReader;
 import org.gssb.pdffiller.exception.UnrecoverableException;
 import org.gssb.pdffiller.template.Choice;
 import org.gssb.pdffiller.template.Template;
+import org.gssb.pdffiller.text.TextBuilder;
+
+import com.github.mustachejava.MustacheException;
 
 public class BulkPdf {
    
@@ -39,8 +43,7 @@ public class BulkPdf {
             String fileName = template.getTemplateFileName();
             int idx = fileName.indexOf(".");
             this.baseFileName = (idx == -1) ? fileName
-                                            : fileName.substring(0, idx) +
-                                " - ";
+                                            : fileName.substring(0, idx);
          }
       }
 
@@ -56,7 +59,14 @@ public class BulkPdf {
    
    private final static Logger logger = LogManager.getLogger(BulkPdf.class);
    
-   private final String EXPECTED_POSTFIX = ".pdf";
+   private static final String CREATE_NAME_ERROR = 
+         "An unexpected error occured when creating the file name using " +
+         "the name template %s.";
+   
+   private static final String CREATE_NAME_SUB_ERROR = 
+         "The file name template %s contains an undefined variable.";
+   
+   private static final String BASE_NAME = "_BaseName_";
 
    private final String sourceFolder;
    private final String generatedFolder;
@@ -64,20 +74,27 @@ public class BulkPdf {
    
    private final RowReader rowReader;
    private final PdfFormFiller pdfFormFiller;
+   private final TextBuilder textBuilder;
    
-   BulkPdf(final AppProperties properties,
-           final RowReader rowReader, final PdfFormFiller pdfFormFiller) {
+   private final String fileNameTemplate;
+   
+   BulkPdf(final AppProperties properties, final RowReader rowReader,
+           final TextBuilder textBuilder,
+           final PdfFormFiller pdfFormFiller) {
       super();
       this.sourceFolder = properties.getSourceFolder();
       this.generatedFolder = properties.getGeneratedFolder();
       this.excelInputFile = properties.getExcelFileName();
       
       this.rowReader = rowReader;
+      this.textBuilder = textBuilder;
       this.pdfFormFiller = pdfFormFiller;
+      
+      this.fileNameTemplate = properties.getFileNameTemplate();
    }
    
    public BulkPdf(final AppProperties properties) {
-      this(properties, new RowReader(), new PdfFormFiller());
+      this(properties, new RowReader(), new TextBuilder(), new PdfFormFiller());
    }
    
    protected List<ExcelRow> createRows(final File excelFile,
@@ -104,17 +121,34 @@ public class BulkPdf {
    // TODO: externalize expression for name
    protected String getTargetFileName(final ExcelRow row, 
                                       final Path templatePath,
-                                      final String baseTargetName) {
-      return baseTargetName + row.getValue("Name").getColumnValue() + 
-             EXPECTED_POSTFIX;
+                                      final Map<String, String> nameValuePairs) {
+      String name;
+      try {
+         name = textBuilder.substitute(this.fileNameTemplate, nameValuePairs);
+      } catch (IOException e) {
+
+         String msg = String.format(CREATE_NAME_ERROR, this.fileNameTemplate);
+         logger.error(msg, e);
+         throw new UnrecoverableException(msg, e);
+      } catch(MustacheException e) {
+
+         String msg = String.format(CREATE_NAME_SUB_ERROR,
+                                    this.fileNameTemplate) + e.getMessage();
+         logger.error(msg, e);
+         throw new UnrecoverableException(msg, e);
+      }
+      return name;
    }
 
    protected File getTargetPdf(final String rootPath, final ExcelRow row,
                                final Path templatePath,
                                final String baseFileName) {
+	   // define additional 
+	   Map<String, String> nameValuePairs = new HashMap<>(row.getRowMap());
+	   nameValuePairs.put(BASE_NAME, baseFileName);
       String targetPath = rootPath + File.separator + 
                           this.generatedFolder + File.separator +
-                          getTargetFileName(row, templatePath, baseFileName);
+                          getTargetFileName(row, templatePath, nameValuePairs);
       return new File(targetPath);
    }
    

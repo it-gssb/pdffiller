@@ -27,6 +27,7 @@ import org.gssb.pdffiller.excel.RowReader;
 import org.gssb.pdffiller.template.Choice;
 import org.gssb.pdffiller.template.Template;
 import org.gssb.pdffiller.template.TemplateHelper;
+import org.gssb.pdffiller.text.TextBuilder;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -39,9 +40,12 @@ public class BulkPdfTest extends PDFValidator {
    private final static String TEMPLATE2 = ROOT + "/sources/AATG Gold.pdf";
    private final static String TEMPLATE3 = ROOT + "/sources/AATG Participation.pdf";
    private final static String GENERATED_DIR = ROOT + "/generated";
-   private final static String masterKey =  "MASTER";
+   
+   private final static String MASTER_KEY =  "MASTER";
+   private final static String FILE_NAME_TEMPLATE = "{{_BaseName_}} - {{Name}}.pdf";
    
    private RowReader rowReader= null;
+   private TextBuilder textBuilder = null;
    private BulkPdf bulkPdf;
 
    private void deleteGeneratedFiles(final File generatedDir) {
@@ -144,10 +148,13 @@ public class BulkPdfTest extends PDFValidator {
       when(props.getSourceFolder()).thenReturn("sources");
       when(props.getGeneratedFolder()).thenReturn("generated");
       when(props.getExcelFileName()).thenReturn("Dummy.xlsx");
+      when(props.getFileNameTemplate()).thenReturn(FILE_NAME_TEMPLATE);
       
       this.rowReader = mock(RowReader.class);
+      this.textBuilder = new TextBuilder();
       PdfFormFiller pdfFormFiller = new PdfFormFiller();
-      this.bulkPdf = new BulkPdf(props, this.rowReader, pdfFormFiller);
+      this.bulkPdf = new BulkPdf(props, this.rowReader, this.textBuilder,
+                                 pdfFormFiller);
       deleteGeneratedFiles(new File(GENERATED_DIR));
    }
 
@@ -163,12 +170,12 @@ public class BulkPdfTest extends PDFValidator {
       Set<Template> alwaysInclude = new HashSet<>();
       alwaysInclude.add(template);
       
-      List<Choice> choices = createMockChoices("AATG Cert - ");
+      List<Choice> choices = createMockChoices("AATG Cert");
       
       Map<String, Map<String, String>> fieldMaps = defineFieldMaps();
       
       List<UnitOfWork> uows =
-         this.bulkPdf.createPdfs(ROOT, "Dummy", masterKey, "secret", 
+         this.bulkPdf.createPdfs(ROOT, "Dummy", MASTER_KEY, "secret", 
                                  alwaysInclude, choices, fieldMaps);
       assertEquals(3, uows.size());
       
@@ -188,7 +195,7 @@ public class BulkPdfTest extends PDFValidator {
          validatePDFDocument(validate0, "abc"+i, expected0);
          
          File validate1 = uow.getGeneratedFiles().get(1);
-         assertTrue(validate1.getName().startsWith("AATG Cert - "));
+         assertTrue(validate1.getName().startsWith("AATG Cert"));
          assertTrue(validate1.getName().endsWith("Sasson, Leon"+i+".pdf"));
          validatePDFDocument(validate1, "abc"+i, expected1);
          i++;

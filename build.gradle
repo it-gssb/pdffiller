@@ -118,7 +118,7 @@ task srcZip(type: Zip) {
 }
 
 test {
-   exclude 'org/gssb/pdffiller/**/TestAll.class'
+   exclude 'org/gssb/pdffiller/**/AllTests.class'
   
    //disable as potentially we have a concurrency issue in test cases
    maxParallelForks = 1
