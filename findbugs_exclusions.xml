@@ -1,0 +1,13 @@
+<FindBugsFilter>
+   <Match>
+      <Class name="org.gssb.pdffiller.BulkNotificator"/>
+      <Bug code="Dm" />
+   </Match>
+
+   <Match>
+      <Class name="~.*\.*Test"/>
+      <Not>
+         <Bug code="IJU" />
+      </Not>
+   </Match>
+</FindBugsFilter>

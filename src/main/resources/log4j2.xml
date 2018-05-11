@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration status="error" name="PDFFILLER" packages="">
+	<Appenders>
+		<Console name="STDOUT" target="SYSTEM_OUT">
+			<PatternLayout>
+				<!-- <Pattern>%m%n</Pattern> -->
+				<Pattern>%d{yyyy-MM-dd HH:mm:ss} %-5p %c{1}:%L - %m%n</Pattern>
+			</PatternLayout>
+		</Console>
+		<RollingFile name="RollingFile" fileName="pdffiller.log" filePattern="pdffiller-%i.log">
+			<PatternLayout>
+				<Pattern>%d{yyyy-MM-dd HH:mm:ss} %-5p %c{1}:%L - %m%n</Pattern>
+			</PatternLayout>
+			<Policies>
+				<OnStartupTriggeringPolicy />
+				<SizeBasedTriggeringPolicy size="10 MB" />
+			</Policies>
+			<DefaultRolloverStrategy max="10" />
+		</RollingFile>
+	</Appenders>
+	<Loggers>
+		<Root level="debug">
+			<AppenderRef ref="RollingFile" />
+			<AppenderRef ref="STDOUT" level="warn" />
+		</Root>
+		<!-- 
+		<logger name="org.gssb.pdffiller.pdf" level="DEBUG"> 
+		   <AppenderRef ref="RollingFile"/> 
+		</logger> 
+		<logger name="org.gssb.pdffiller.excel" level="DEBUG">
+           <AppenderRef ref="STDOUT"/> 
+		</logger> -->
+	</Loggers>
+</Configuration>

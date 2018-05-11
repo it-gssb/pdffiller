@@ -1,0 +1,372 @@
+//
+// @author  $Author$
+// @version $Revision$
+// @date    $Date$
+//
+apply plugin: 'java'
+apply plugin: 'eclipse'
+apply plugin: 'application'
+apply plugin: 'findbugs'
+apply plugin: 'project-report'
+apply plugin: 'com.github.ben-manes.versions'
+
+ext {
+   versionProperties = file("${rootProject.projectDir.canonicalPath}/src/main/resources/version.properties")
+   dayFormat = 'MM/dd/yyy'
+   timeFormat = 'H:mm:ss z'
+   gradleVersionLocal = '2.11'
+}
+
+sourceCompatibility = 1.8
+
+// Load version info during configuration phase
+version = readVersionInfo(versionProperties)
+
+mainClassName = "org.gssb.pdffiller.BulkNotificator"
+group = "org.gssb"
+
+buildscript {
+   repositories {
+      mavenCentral() 
+      jcenter()
+      maven {
+        url 'http://dl.bintray.com/content/djmijares/gradle-plugins'
+      }
+    }
+
+    dependencies {
+        classpath 'com.github.ben-manes:gradle-versions-plugin:0.17.0'
+   }
+}
+
+configurations {
+    testArtifacts
+    // provided implies that the project artifacts are added to the
+    // compileClasspath for main and test and the runtimeClasspath for test
+    provided
+}
+
+sourceSets {
+   main {
+     compileClasspath += configurations.provided
+     java {
+       srcDirs = ['src/main/java']
+     }
+   }
+   test {
+      compileClasspath += configurations.provided
+      runtimeClasspath += configurations.provided
+   }
+}
+
+eclipse {
+	classpath {
+		defaultOutputDir = file('build-eclipse')
+		downloadSources=true
+	}
+}
+
+// Jar task configuration
+jar {
+   exclude ("licenses/**")
+	manifest {
+		attributes 'Implementation-Title': 'PDF Filler for GSSB AATG Certificates', 'Implementation-Version': version
+	}
+}
+
+task testJar (type: Jar) {
+   baseName = "${project.name}-test"
+   from sourceSets.test.output
+}
+
+repositories { 
+   mavenCentral()
+   jcenter()
+}
+
+dependencies {
+    // https://mvnrepository.com/artifact/org.apache.commons/commons-collections4
+    compile group: 'org.apache.commons', name: 'commons-collections4', version: '4.1'
+    // command line
+    compile group: 'commons-cli', name: 'commons-cli', version: '1.4'
+    // commons configuration
+    compile group: 'org.apache.commons', name: 'commons-configuration2', version: '2.2'
+    compile group: 'commons-beanutils', name: 'commons-beanutils', version: '1.9.3'
+    // pdf
+    compile group: 'org.apache.pdfbox', name: 'pdfbox', version: '2.0.9'
+    // spreadsheet
+    compile group: 'org.apache.poi', name: 'poi', version: '3.17'
+    compile group: 'org.apache.poi', name: 'poi-ooxml', version: '3.17'
+    // mail
+    compile group: 'com.sun.mail', name: 'javax.mail', version: '1.6.1'
+    compile group: 'com.sun.mail', name: 'smtp', version: '1.6.1'
+    // https://mvnrepository.com/artifact/com.github.spullara.mustache.java/compiler
+    compile group: 'com.github.spullara.mustache.java', name: 'compiler', version: '0.9.5'
+
+    compile group: 'org.apache.logging.log4j', name: 'log4j-api', version: '2.11.0'
+    compile group: 'org.apache.logging.log4j', name: 'log4j-core', version: '2.11.0'
+   
+    testCompile "junit:junit:4.12"
+    // https://mvnrepository.com/artifact/org.mockito/mockito-core
+    testCompile group: 'org.mockito', name: 'mockito-core', version: '2.18.3'
+}
+
+task srcZip(type: Zip) {
+    classifier = 'src'
+    from projectDir
+    include 'src/main/java/**/*.java'
+}
+
+test {
+   exclude 'org/gssb/pdffiller/**/TestAll.class'
+  
+   //disable as potentially we have a concurrency issue in test cases
+   maxParallelForks = 1
+   // each test is run by parallel agent; rational is that we have a number of  
+   // large test cases that require a long execution time with lot's of I/O
+   forkEvery = 4
+}
+
+ tasks.withType(FindBugs) {
+     ignoreFailures = true
+     excludeFilter = file('findbugs_exclusions.xml')
+     reports {
+         xml.enabled = false
+         html.enabled = true
+     }
+ }
+
+task sourceSetJavaProperties << {
+	sourceSets {
+
+		xmlExtensions {
+			println "java.srcDirs = ${java.srcDirs}"
+			println "resources.srcDirs = ${resources.srcDirs}"
+			println "java.files = ${java.files.name}"
+			println "allJava.files = ${allJava.files.name}"
+			println "resources.files = ${resources.files.name}"
+			println "allSource.files = ${allSource.files.name}"
+			println "output.classesDir = ${output.classesDir}"
+			println "output.resourcesDir = ${output.resourcesDir}"
+			println "output.files = ${output.files}"
+			println "compileClasspath = ${compileClasspath}"
+			compileClasspath.each {
+				println it
+			}
+		}
+	}
+}
+    
+ //include all licenses of sub-project
+ applicationDistribution.from('src/main/resources/licenses/runtime') {
+   into "licences"
+   include "**"
+}
+ 
+applicationDistribution.from('src/main/dist') {into "/"}
+applicationDistribution.from('src/main/resources') {
+   into "conf"
+   include "*.properties"
+   include "*.xml"
+}
+applicationDistribution.from('src/bin') { 
+   into "bin" 
+   include "*.sh"
+   include "*.bat"
+}
+
+//   applicationDistribution.from('src/main/resources') {
+//      into "xslt"
+//      include "*.xsl"
+//   }
+
+// Scripts
+
+startScripts {
+   defaultJvmOpts=["-Dlog4j.configurationFile=%~dp0/../conf/log4j2.xml"]
+   classpath = files(jar.archivePath)
+   doLast {
+      def eolSave = System.properties['line.separator']
+      System.properties['line.separator'] = '\r\n'
+      def lines = windowsScript.readLines()
+      windowsScript.withPrintWriter { writer ->
+         fixWindowsStartScript(writer, lines)
+      }
+      System.properties['line.separator'] = '\n'
+      lines = unixScript.readLines()
+      unixScript.withPrintWriter { writer ->
+         fixUnixStartScript(writer, lines)
+      }
+      
+      System.properties['line.separator'] = eolSave
+   }
+}
+
+def fixWindowsStartScript(writer, lines) {
+	lines.eachWithIndex { line, i ->
+		if (line =~ /^set CLASSPATH=%APP_HOME%/) {
+			writer.println line
+			writer.println "set CLASSPATH=%CLASSPATH%;%APP_HOME%\\lib\\*"
+			writer.println ''
+         writer.println "set DEFAULT_JVM_OPTS=\"-Dlog4j.configurationFile=%~dp0/../conf/log4j2.xml\""
+			writer.println ''
+		} else {
+			writer.println line
+		}
+	}
+}
+
+def fixUnixStartScript(writer, lines) {
+	lines.eachWithIndex { line, i ->
+	    if (line =~ /^CLASSPATH=\$/) {
+			writer.println line
+			writer.println ''
+			writer.println "CLASSPATH=\$CLASSPATH:\$APP_HOME/lib/*"
+			writer.println ''
+         writer.println "DEFAULT_JVM_OPTS=\"-Dlog4j.configurationFile=\${0%/*}/../conf/log4j2.xml\""
+			writer.println ''
+		} else {
+			writer.println line
+		}
+	}
+}
+	
+task forceTest( ) {
+   dependsOn cleanTest, test
+}
+   
+   // version of build
+
+task increaseBuildNumber() << {
+   updateTransientVersionProperties()
+   println "increased build number ..."
+}
+   
+gradle.taskGraph.whenReady { TaskExecutionGraph graph ->
+   if (graph.hasTask(":release")) {
+      if (!version.isRelease) {
+         version.isRelease = false
+         updateBuildRelease(false)
+      }
+   } else {
+      if (version.isRelease) {
+         version.isRelease = true
+         updateBuildRelease(true)
+      }
+   }
+}
+   
+void updateTransientVersionProperties() {
+   Date d = new Date()
+   ant.propertyfile(file: versionProperties){
+      entry(key: 'build.date', type: 'date', operation: '=', value: d, pattern: dayFormat)
+   }
+   ant.propertyfile(file: versionProperties){
+      entry(key: 'build.time', type: 'date', operation: '=', value: d, pattern: timeFormat)
+   }
+   version.buildNumber++
+   ant.propertyfile(file: versionProperties){
+      entry(key: 'build.number', type: 'int', operation: '=', value: version.buildNumber)
+   }
+
+   ant.propertyfile(file: versionProperties){
+      entry(key: 'product.version', type: 'string', operation: '=', value: version)
+   }
+}
+   
+task printVersion(group: 'versioning', description: 'Prints versioning info as persisted in the version.properties file') << {
+   println "Major Version: $version.major"
+   println "Minor Version: $version.minor"
+   println "Patch Version: $version.patch"
+   println "Build Number: $version.buildNumber"
+   println "Build Day: $version.buildDay"
+   println "Build Time: $version.buildTime"
+}
+
+task incrementMajorVersion(group: 'versioning', description: 'Increments the product.version.major number stored in the version.properties file') << {
+   ant.propertyfile(file: versionProperties){
+      entry(key: 'product.version.major', type: 'int', operation: '+', value: 1)
+   }
+}
+
+task incrementMinorVersion(group: 'versioning', description: 'Increments the product.version.minor number stored in the version.properties file') << {
+   ant.propertyfile(file: versionProperties){
+      entry(key: 'product.version.minor', type: 'int', operation: '+', value: 1)
+   }
+}
+
+task incrementPatchVersion(group: 'versioning', description: 'Increments the product.version.patch number stored in the version.properties file') << {
+   ant.propertyfile(file: versionProperties){
+      entry(key: 'product.version.patch', type: 'int', operation: '+', value: 1)
+   }
+}
+
+task incrementBuildNumber(group: 'versioning', description: 'Increments the build.number number stored in the version.properties file') << {
+   ant.propertyfile(file: versionProperties){
+      entry(key: 'build.number', type: 'int', operation: '+', value: 1)
+   }
+}
+
+task release(group: 'versioning', description: 'A marker task that triggers updating of the build.isRelease property in the version.properties file to true', dependsOn: 'distZip') {
+}
+
+task createWrapper(type: Wrapper) {
+   gradleVersion = gradleVersionLocal
+}
+
+class VersionInfo {
+   Integer major
+   Integer minor
+   Integer patch
+   Integer patch2
+   Integer patch3
+   String buildDay
+   String buildTime
+   Integer buildNumber
+   Boolean isRelease
+
+   VersionInfo(Integer major, Integer minor, Integer patch, Integer patch2, Integer patch3, Integer buildNumber, String buildDay, String buildTime, Boolean isRelease) {
+      this.major = major
+      this.minor = minor
+      this.patch = patch
+      this.patch2 = patch2
+      this.patch3 = patch3
+      this.buildNumber = buildNumber
+      this.isRelease = isRelease
+      this.buildDay = buildDay
+      this.buildTime = buildTime
+   }
+
+   String toString() {
+      "$major.$minor.$patch-$patch2-$patch3-$buildNumber${isRelease ? '' : '-SNAPSHOT'}"
+   }
+}
+
+VersionInfo readVersionInfo(propertiesFile) {
+    //println 'Using ' + propertiesFile
+   if (!propertiesFile.exists()) {
+      throw new GradleException("Version information properties file does not exist: $versionProperties.canonicalPath")
+   }
+
+   Properties props = new Properties()
+
+   propertiesFile.withInputStream { it ->
+      props.load(it)
+   }
+   
+   new VersionInfo(props.'product.version.major'.toInteger(),
+         props.'product.version.minor'.toInteger(),
+         props.'product.version.patch'.toInteger(),
+         props.'product.version.patch2'.toInteger(),
+         props.'product.version.patch3'.toInteger(),
+         props.'build.number'.toInteger(),
+         props.'build.date',
+         props.'build.time',
+         props.'build.isRelease'.toBoolean())
+}
+
+void updateBuildRelease(Boolean value) {
+   ant.propertyfile(file: versionProperties){
+      entry(key: 'build.isRelease', operation: '=', value: value)
+   }
+}
