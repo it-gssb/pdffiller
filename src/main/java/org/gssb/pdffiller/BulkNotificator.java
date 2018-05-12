@@ -204,7 +204,7 @@ public class BulkNotificator {
 	/**
 	 * Configuration:
 	 * 
-	 * -r /Users/michaelsassin/Documents/GSSB/tools/pdffiller/src/test/resources/2018 [-m **master-key***] [-c] [-p ***pwd***]
+	 * -c /Users/michaelsassin/Documents/GSSB/tools/pdffiller/src/test/resources/2018 [-m **master-key***] [-p ***pwd***] [-s]
 	 * 
 	 * @param args
 	 */

@@ -158,12 +158,19 @@ public class BulkPdf {
                                  final Path templatePath, 
                                  final String baseFileName,
                                  final Map<String, String> formFieldMap) {
-      File targetPdf = getTargetPdf(rootPath, row, templatePath,
-                                    baseFileName);
-      String secret = row.getValue(secretColumnName).getColumnValue();
+      // uses by default reference to PDF file if it does not contain a form
+      File targetPdf = templatePath.toFile();
       try {
-         this.pdfFormFiller.populateAndCopy(templatePath.toFile(), targetPdf, row,
-                                            masterKey, formFieldMap, secret);
+         if (this.pdfFormFiller.isPdfForm(templatePath.toFile())) {
+            targetPdf = getTargetPdf(rootPath, row, templatePath, baseFileName);
+            String secret = row.getValue(secretColumnName).getColumnValue();
+            this.pdfFormFiller
+                .populateAndCopy(templatePath.toFile(), targetPdf, row,
+                                 masterKey, formFieldMap, secret);
+         } else {
+            logger.debug("Include plain PDF document " + 
+                         targetPdf.toString() + " into UoW.");
+         }
       } catch (InvalidPasswordException e) {
          String msg = "PDF template '" + templatePath.toFile().getAbsolutePath() +
                       "' is encrypted.";

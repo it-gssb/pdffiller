@@ -50,7 +50,18 @@ public class PdfFormFiller {
       } else {
           assert(0==1) : "No field found with name:" + fieldName;
       }
-  }
+   }
+   
+   public boolean isPdfForm(final File pdfFile) 
+                  throws IOException, InvalidPasswordException{
+      PDDocument pdf = PDDocument.load(pdfFile);
+      PDDocumentCatalog docCatalog = pdf.getDocumentCatalog();
+      PDAcroForm acroForm = docCatalog.getAcroForm();
+      boolean isPDFForm = acroForm!=null; 
+      pdf.close();
+      
+      return isPDFForm;
+   }
    
    public void populateAndCopy(final File templatePdf, final File targetPdf,
                                final ExcelRow excelRow, final String masterKey,
@@ -58,7 +69,6 @@ public class PdfFormFiller {
                                final String secret) 
                throws IOException, InvalidPasswordException {
       PDDocument pdf = PDDocument.load(templatePdf);
-      
       PDDocumentCatalog docCatalog = pdf.getDocumentCatalog();
       PDAcroForm acroForm = docCatalog.getAcroForm();
       
