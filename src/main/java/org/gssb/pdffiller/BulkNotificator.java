@@ -53,7 +53,7 @@ public class BulkNotificator {
 		options.addOption("c", "configuration", true, "Configuration file for PDF Mail Merge application.");
 		options.addOption("p", "password", true, "Email account user password.");
 		options.addOption("m", "master-key", true, "Master key for PDF encryption");
-		options.addOption("s", "suppress", false, "Logs emails instead of sending them.");
+		options.addOption("s", "suppress", false, "Logs email instead of sending them.");
 	}
 	
 	//
@@ -127,7 +127,7 @@ public class BulkNotificator {
 			if (cmd.hasOption("p")) {
 				config.emailPassword = cmd.getOptionValue("p");
 			} else {
-				logger.error("Missing email user login password.");
+				logger.error("Missing email account password.");
 				help();
 			}
 
@@ -177,7 +177,7 @@ public class BulkNotificator {
                                        secretColumnName);
             throw new UnrecoverableException(msg, e);
          }
-         if (!properties.getEmailHost().isEmpty()) {
+         if (!config.emailPassword.isEmpty()) {
             BulkEmail bulkEmail = createBulkEmail(properties);
             bulkEmail.sendEmails(createdUnits, config.root,
                                  config.simulate,
