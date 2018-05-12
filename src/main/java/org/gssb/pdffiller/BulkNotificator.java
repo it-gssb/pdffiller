@@ -49,11 +49,11 @@ public class BulkNotificator {
 	public BulkNotificator() {
 		super();
 		options = new Options();
-		options.addOption("h", "help", false, "show help.");
-		options.addOption("c", "configuration", true, "Configuration file for the bulk notification PDF process.");
-		options.addOption("p", "password", true, "email account user password.");
-		options.addOption("m", "master-key", true, "master key for the PDF encryption");
-		options.addOption("s", "simulate", false, "simulate email creation.");
+		options.addOption("h", "help", false, "Show help.");
+		options.addOption("c", "configuration", true, "Configuration file for PDF Mail Merge application.");
+		options.addOption("p", "password", true, "Email account user password.");
+		options.addOption("m", "master-key", true, "Master key for PDF encryption");
+		options.addOption("s", "suppress", false, "Logs emails instead of sending them.");
 	}
 	
 	//
