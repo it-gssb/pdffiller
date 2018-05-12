@@ -34,7 +34,6 @@ public class PropertiesTest {
 	@Test
 	public void testExcelSetup() {
 		assertEquals("Ergebnisse", props.getExcelSheetName());
-		assertEquals("TemplateName", props.getExcelPdfTemplateName());
 		assertEquals(2, props.getTargetEmailAddresses().size());
 		assertEquals("PrimaryEmail", props.getTargetEmailAddresses().get(0));
 		assertEquals("SecondaryEmail", props.getTargetEmailAddresses().get(1));
@@ -127,7 +126,6 @@ public class PropertiesTest {
 	   File  propFile2 = new File(P_PATH, PROPS2);
 		AppProperties props = new AppProperties(propFile2.toPath());
 		assertEquals("Testergebnisse", props.getExcelSheetName());
-		assertEquals("Template", props.getExcelPdfTemplateName());
 		assertEquals("test@xyz.org", props.getEmailReturnAddress());
 	}
 

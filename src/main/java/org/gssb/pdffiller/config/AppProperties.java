@@ -30,13 +30,11 @@ public class AppProperties extends AbstractConfiguration {
    private final static String XLS_INPUT_FILE_NAME          = "excel.file_name";
    private final static String XLS_INPUT_FILE_NAME_DEFAULT  = "Raw_Input.xlsx";
    private final static String XLS_SHEET_NAME_KEY           = "excel.sheet_name";
-   private final static String XLS_TEMPLATE_NAME_COLUMN_KEY = "excel.template_name_column";
    private final static String XLS_TARGET_EMAIL_COLUMNS_KEY = "excel.target_email_columns";
    private final static String XLS_SECRET_COLUMNS_KEY       = "excel.secret_column";
    private final static String XLS_SECRET_COLUMNS_DEFAULT   = "Key";
    
    private final static String XLS_SHEET_NAME_DEFAULT       = "Testergebnisse";
-   private final static String XLS_TEMPLATE_NAME_COLUMN_DEFAULT = "Template";
    private final static List<String> XLS_TARGET_EMAIL_COLUMNS_DEFAULT = 
          Arrays.asList(new String[]{"PrimaryEmail", "SecondaryEmail"});
    
@@ -114,14 +112,6 @@ public class AppProperties extends AbstractConfiguration {
 	  String value = getProperty(XLS_SHEET_NAME_KEY);
 	  if (value==null || value.isEmpty()) {
 		  value = XLS_SHEET_NAME_DEFAULT;
-	  }
-      return value;
-   }
-   
-   public String getExcelPdfTemplateName() {
-	  String value = getProperty(XLS_TEMPLATE_NAME_COLUMN_KEY);
-	  if (value==null || value.isEmpty()) {
-		  value = XLS_TEMPLATE_NAME_COLUMN_DEFAULT;
 	  }
       return value;
    }
@@ -221,11 +211,7 @@ public class AppProperties extends AbstractConfiguration {
    //
    
    public String getFileNameTemplate() {
-      String value = getProperty(FILE_NAME_TEMPLATE);
-      if (value==null) {
-         value = "{{$BaseName}}";
-      }
-      return value;
+      return getMandatoryProperty(FILE_NAME_TEMPLATE);
    }
    
    //
@@ -260,6 +246,8 @@ public class AppProperties extends AbstractConfiguration {
 
    public Map<String, String> getChoices(final String choiceName) {
       String key = CHOICE + "." + Objects.requireNonNull(choiceName) + "." + CHOICE_SELECT;
+      // validate that key is defined and has a value
+      getMandatoryProperty(key);
       return Collections.unmodifiableMap(getPropertyMap(key));
    }
 
