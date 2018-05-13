@@ -10,9 +10,28 @@ Tool to support bulk PDF Mail Merge using data in Excel spreadsheet and sending 
 
 # Install
 
-TBD
+Download and install the latest [Java SE Runtime Environment 1.8](http://www.oracle.com/technetwork/java/javase/downloads/jre8-downloads-2133155.html)
 
-# Use PDF Filler Application
+Download the latest released version of the [PDF Filler application](https://github.com/it-gssb/pdffiller). 
+The distribution file `pdffiller-<version number>.zip` contains folders with the following structure:
+
+```
+  pdffiller-<version>
+   |
+   |-- bin
+   |-- conf
+   |-- lib
+```
+
+The `bin` folder contains the Linux and Windows `pdffiller` shells that are used to invoke the application from the command line.
+The `lib` folder contains the PDF Filler jar file and all jars of the utilized [third-party open source libraries](#list-of-third-party-components).
+The `conf` folder contains optional configuration definitions for logging and the version file.
+
+The application can be used after [defining a project](#project-structure) and calling the `pdffiller`
+command with the proper parameters as described [here](#command-line).
+
+
+# User Guide
 
 ## Project Structure
 
@@ -32,44 +51,28 @@ A Mail Merge project has the following folder structure:
    |-- generated
 ```
 
-The project folder name can be chosen but the name of the child folders `sources` and `generated` is defined by default. The configuration child folder should have the name `config`.
+The project folder name can be chosen but the name of the child folders `sources` and `generated` is defined by default. The configuration child folder should have the name `config`. The `config` folder contains the project configuration file. The `sources` folder contains PDF templates, text templates, and spreadsheets with the records to be merged. Generated PDF files are placed in the `generated` folder.
 
-The `config` folder contains the configuration files for the project that defines details about
-* the XLSX spreadsheet file with the records to be merged, sheet name, and column definitions,
-* the [Mustache](https://mustache.github.io/mustache.5.html) template file with the email body and template string for the email subject line
-* the Mustache template string for the name of generated files,
-* PDF form template files and selection criteria, and
-* PDF form field mapping instructions.
+## Project Configuration
 
-The `sources` folder contains the 
-* PDF Template files, 
-* Mustache mail body template, and
-* the XSLX spreadsheet that contains the record to be merged into the PDF templates and mail boy templates.
-
-Generated PDF files are placed in the `generated` folder.
-
-## Configuration File
-
-The configuration file defines all non-confidential settings of the application.
-
-The email user password and master PDF encryption key are not part of the configuration file and must be passed as parameters of the application command line interface.
+A configuration file defines all non-confidential settings of the application. Confidential information such as the email account password or the master PDF encryption key are not included and must be passed as parameters of the application command line interface.
 
 ### Basic PDF Mail Merge Configurations
 
-This section contains the configurations required to create PDF files from PDF form templates. Each row in the provided xslx spreadsheet sheet is used to populate the PDF form and define the names of the generated files.
+This section contains the configurations required to create PDF files from PDF form templates. 
 
 Configuration Key   | Mandatory | Description
 --------------------| --------- | ---------------------------------------
-excel.file\_name | Y | name of the Excel xslx spreadsheet in the `sources` folder that contains the records to be merged
-excel.sheet\_name | Y | name of the sheet in the excel spreadsheet with the records
-excel.secret_column | Y | column in selected input sheet that contains the PDF encryption key
-file.name\_template | Y | text template using [Mustache](https://mustache.github.io/mustache.5.html) syntax to create the name of the generated file. The system variable {{\_BaseName\_}} contains the template file name without the postfix (e.g. '.pdf')
-template.\<key\> | Y | defines a name of a PDF form template located in the `sources` folder and associates the alias \<key\>
-mappings.\<key\> | N | defines for PDF template with alias <key> a list of column mappings \<form field\> : \<sheet column\> that is used to map excel sheet columns to PDF form fields.
+excel.file\_name | Y | Name of the Excel xslx spreadsheet in the `sources` folder that contains the records to be merged. For each record one or multiple PDF files are created according to the configuration.
+excel.sheet\_name | Y | Name of the sheet in the excel spreadsheet with the records.
+excel.secret_column | Y | Column in selected input sheet that contains the PDF encryption key.
+file.name\_template | Y | Text template using [Mustache](https://mustache.github.io/mustache.5.html) syntax to create the name of the generated file. The system variable {{\_BaseName\_}} contains the template file name without the postfix (e.g. '.pdf').
+template.\<alias\> | Y | Defines a name of a PDF form template located in the `sources` folder. The name is associated with the alias \<alias\>. Multiple PDF files may be defined, each with a different alias name \<alias\>.
+mappings.\<alias\> | N | Defines for PDF template with alias name <alias> a list of column mappings \<form field\> : \<sheet column\> that is used to map excel sheet columns to PDF form fields.
 
 The option to map PDF form columns to spreadsheet columns is useful if you need to map data to PDF forms for which you cannot define the column names.
 
-:heavy_exclamation_mark: Please note that PDF files **without** a form will not be used to generate a derived PDF document. However, the original PDF document will be included into emails. This feature is helpful if you like to include PDF documents in combination with generated documents. 
+:heavy_exclamation_mark: Please note that PDF files **without** a form will not be used to generate a derived PDF document. However, the original PDF document will be included into emails. This feature is helpful for emailing plain PDF documents with generated documents. 
 
 #### Example Configuration
 
@@ -80,8 +83,8 @@ excel.secret_column = Key
 file.name_template  = {{_BaseName_}} - {{Name}}.pdf
 ```
 
-The configuration indicates that the source of the mail merge operations is a sheet called 'Testergebnisse' in the Excel spreadsheet 'GSSB Raw Results.xlsx'.
-The column with the encryption key is `Key`. The PDF Filler application creates files, which names begin with the base name  of the PDF Form template followed by ' - ' and the record's value of the `Name` column.
+The configuration determines that the source of the mail merge operations is a sheet called 'Testergebnisse' in the Excel spreadsheet 'GSSB Raw Results.xlsx'.
+The encryption key is extracted column `Key` of the current excel sheet row. The named of the generated files are defined to begin with the base name of the PDF form template, which is expressed by `{{_BaseName_}}` followed by ' - ' and the record's value of the `Name` column, which is expressed by the Mustache expression `{{Name}}`.
 
 ```
 template.pdf1 = AATG Raw Score.pdf
@@ -98,16 +101,16 @@ mappings.pdf5 = Text1 : Name, Text2 : Level, Text3 : LehrerIn, Text4 : Schule
 mappings.pdf6 = Text5 : Name, Text6 : Level, Text7 : LehrerIn, Text8 : Schule
 ```
 
-The configuration defines six PDF form documents with PDF Alias names pdf1 through pdf6.
-PDF Forms pdf2 through pdf6 define mappings between PDF form fields and Excel columns. 
+The configuration defines six PDF form documents with alias names pdf1 through pdf6.
+PDF forms pdf2 through pdf6 define mappings between PDF form fields and Excel columns. 
 For example, Excel column `Name` is mapped to PDF Form field `Text1` for pdf2 through pdf5 and to PDF form field `Text5` for pdf6.
 
 ### Advanced PDF Mail Merge Configuration for PDF Form Choices
 
-The PDF Filler applications supports data-driven decision for the selection of a PDF form using the choice configuration.
-For example, students may receive a certificate based on a PDF form that reflects the level of accomplishment such as 'gold', 'silver', 'bronze'. 
+The PDF Filler application supports data-driven decision for the selection of a PDF form using the choice configuration.
+For example, students may receive a certificate based on a PDF form that reflects the level of accomplishment.
 
-A PDF Form is selected using the choice feature based on the value of a spreadsheet column. The name of the generated file may incorporate the base name of the template or a generic base name that is supplied by a configuration.
+PDF Filler selects a PDF form using the value of a spreadsheet column and the name supplied to the '\_BaseName\_` is either the base name of the selected PDF form file or the name that is supplied in the configuration.
 
 Multiple PDF files may be generated based on separate sets of choice configurations.
 Each group of choice definitions must use the same choice.\<name\> key prefix.
@@ -115,11 +118,11 @@ Each group of choice definitions must use the same choice.\<name\> key prefix.
 
 Configuration Key          | Mandatory | Description
 -------------------------- | --------- | ---------------------------------------
-choice.\<name\>.select | Y | a list of selection criteria \<value\> : \<key\>. \<value\> defines the expected value and \<key\> is a PDF form template alias defined in the template.\<key\> configuration
-choice.\<name\>.selectcolumn | N | column in the spreadsheet that defines the value used for selecting a PDF Form template. The default value is `Template`.
-choice.\<name\>.basename | N | is used as the base name of the generated PDF file. The default value is the template file name without its type postfix. 
+choice.\<name\>.select | Y | A list of selection criteria \<value\> : \<alias\>. \<value\> defines the expected value and \<alias\> is the PDF file alias defined in the template.\<alias\> configuration.
+choice.\<name\>.selectcolumn | N | Column in the spreadsheet that defines the value used for selecting a PDF Form template. The default value is `Template`.
+choice.\<name\>.basename | N | Is used as the value of the system variable '\_BaseName\_`. The default value is the template file name without its type postfix. 
 
-PDF Form templates are not used for standard mail merge operations if their alias names that are referenced in the choice.<name>.select expressions.
+:heavy_exclamation_mark: PDF form templates are always processed if they are not referenced in any choice definition.
 
 #### Example Configuration
 
@@ -130,17 +133,16 @@ choice.certificate.select       = Goldurkunde:pdf2, Silberurkunde:pdf3, Bronzeur
 ```
 
 The configuration defines a choice configuration named 'certificate' that selects one of the five PDF forms pdf2 through pdf6.
-The value that the decision is based on is located in column `Award` of the sheet. For example, pdf2 (mapped to PDF form 'AATG Gold.pdf') is selected if the sheet column for the current record contains value 'Goldurkunde'.
+The value that the decision is based on is located in column `Award` of the sheet. For example, pdf2 (mapped to PDF form 'AATG Gold.pdf') is selected if the sheet column for the current record contains the value 'Goldurkunde'.
 
-PDF form pdf1 is not used in the choice configuration and therefore is always used for creating a new PDF document per record.
+The definition of the `basename` with value 'ATTG Certificate' in conjunction with the previously defined PDF file name expression `{{_BaseName_}} - {{Name}}.pdf` implies that all generated PDF files have a name that begind with  'ATTG Certificate - ' followed by the value in the records `name` column.
+
+PDF form pdf1 is not used in the choice configuration and therefore is always used to create a new PDF document per record.
 
 
 ### Sending Email with PDF Document Attachments
 
-Generated PDF documents may be send to one or multiple recipients.
-Recipients' email addresses need to be included into each spreadsheet record and only the documents generated based on the same record are included in the email.
-
-Emails' subject and email body are generated using Mustache templates.
+Generated PDF documents may be send to one or multiple recipients that are defined in the spreadsheet record used to generate the PDF documents. Each email subject and plain text body are generated using [Mustache](https://mustache.github.io/mustache.5.html) templates.
 
 Configuration Key            | Mandatory | Description
 ---------------------------- | --------- | ---------------------------------------
@@ -152,8 +154,8 @@ email.user\_return\_address | N | email address used as the return address of th
 email.timeout | N | time in ms until an attempt to send email times out (default is 10000 = 10 seconds)
 email.wait | N | wait time in ms before another attempt to email is made after a failure (default is 3000 = 3 seconds)
 email.retries | N | number of attempts to send email before email operation (default value is 3)
-email.subject | Y | text template using [Mustache](https://mustache.github.io/mustache.5.html) syntax to create subject line
-email.body\_file | Y | text template using the [Mustache](https://mustache.github.io/mustache.5.html) syntax that is used to create the body of the email
+email.subject | Y | text template using Mustache syntax to create subject line
+email.body\_file | Y | text template using the Mustache syntax that is used to create the body of the email
 
 #### Example Configuration
 
@@ -168,46 +170,58 @@ email.body_file           = aatg_certificates.mustache
 
 The configuration defines the email smtp host, port, and the sender's email address noreply@myemaildomain.com.
 The return address is defined as principal@myemaildomain.com and will be displayed in the recipients' email.
-The subject line is defined using a Mustache expression which includes the value of sheet column 'Name' into the subject line.
-The body of the email message is defined in the Mustache template 'aatg_certificates.mustache', which is located in the 'sources' folder.
+The subject line is defined using a Mustache expression which includes the value of sheet column `Name` into the subject line.
+The body of the email message is defined in the Mustache template 'aatg_certificates.mustache', which is located in the `sources` folder.
 
 ## Command Line
 
 The application is invoked by calling the `pdffiller` shell that is located in the `bin` folder of the distribution.
 
-The command line
-
-` pdffiller -c path-to-configuration-file `
-
+The command
+```
+   pdffiller -c path-to-configuration-file 
+```
 executes the basic PDF Mail Merge functionality that produces PDF files as described in the configuration files and the spreadsheet data.
 
-The additional master encryption key triggers encryption of PDF documents. The command line
+The use of master encryption key option ` -m master-key` triggers encryption of PDF documents. The command
+```
+   pdffiller -c path-to-configuration-file -m master-key
+```
+generates encrypted PDF documents, which may be decrypted with the master key or the key supplied in the sheets encryption key column.
 
-` pdffiller -c path-to-configuration-file -m master-key`
+:heavy_exclamation_mark: Please note that PDF documents are encrypted only if the sheet's encryption key column contains a non-empty value.
 
-the generated PDF documents are encrypted and may be decrypted with the master key or the key supplied in the sheet key column.
-Please note that PDF documents are only encrypted if the sheet's key column contains a non-empty value.
+Adding the email account password with option `-p password-email-account` triggers sending of emails to recipients defined in the sheet's email address columns. The resulting command looks as follows:
+```
+   pdffiller -c path-to-configuration-file -m master-key -p password-email-account
+```
+Please ensure that you properly configure email server, port, account, subject, and body in the properties file before attempting to send emails.
 
-The additional email account password triggers triggers sending of emails to the recipients defined in the sheet's email columns.
-The resulting command line looks as follows:
-
-` pdffiller -c path-to-configuration-file -m master-key -p password-email-account`
-
-This assumes that the email server, port, account, subject, and body files are properly configured.
-
-During the development of the mail merge project it may be helpful avoiding sending emails.
-The command line option `-s` prevents that emails are sent and instead emails are only logged.
+During the development of a mail merge project it may be helpful to avoid sending emails.
+Using the command line option `-s` results in emails being logged without sending them.
 
 ### Sample Configurations
 
-The PDF Filler tool defines a sample project in the src/test/resources/2018 that is included when you clone the GitHub project.
+The PDF Filler tool defines a sample project in the `src/test/resources/2018` that is included when you clone the GitHub project.
 
 Simply issue the command and supply the path to the configuration file 'sample\_raw.properties' or 'sample\_cert.properties'.
+Let's assume that you defined a shell variable `PROJECT_ROOT` that defines the path to the PDF Filler git project clone.
+Issuing the command
+```
+   pdffiller -c $PROJECT_ROOT/src/test/resources/2018/config/sample_cert.properties
+```
+will generate 10 files - two per record in the spreadsheet - in folder `$PROJECT_ROOT/src/test/resources/2018/generated`
+that reflect the sample records in sheet 'Testergebnisse' in spreadsheet `$PROJECT_ROOT/src/test/resources/2018/sources/GSSB Raw results.xlsx`.
 
 
 # Build
 
-TBD
+Download and install the most recent [Java SE Development Kit 1.8](http://www.oracle.com/technetwork/java/javase/downloads/jdk8-downloads-2133151.html).
+
+Clone the [PDF Filler](https://github.com/it-gssb/pdffiller.git) repository using your IDE or the Git [command line tool](https://git-scm.com/downloads).
+
+Open a command shell in the root directory `pdffiller` of the PDF Filler project and run the command ./gradlew build.
+This creates distribution in `pdffiller/build/distributions/pdffiller-<version number>.zip` that you can unzip in a directory of your choice.
 
 # List of Third Party Components
 
