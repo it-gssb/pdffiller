@@ -338,7 +338,8 @@ class VersionInfo {
    }
 
    String toString() {
-      "$major.$minor.$patch-$patch2-$patch3-$buildNumber${isRelease ? '' : '-SNAPSHOT'}"
+      "$major.$minor.$patch${isRelease ? '' :'-'+buildNumber + '-SNAPSHOT'}"
+//      "$major.$minor.$patch.$patch2.$patch3-$buildNumber${isRelease ? '' : '-SNAPSHOT'}"
    }
 }
 

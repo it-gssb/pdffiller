@@ -5,22 +5,25 @@ Tool to support bulk PDF Mail Merge using data in Excel spreadsheet and sending 
 
 ## Use Cases 
 
-* Fill one or multiple files for each record in the Excel spreadsheet and save as files.
-* Send generated files associated with each spreadsheet record to one or multiple email addresses. Subject line and email body are customizable and can contain data from the spreadsheet record.
+* **PDF Mail Merge**<p>
+  Create PDF files by merging records retrieved from an Excel spreadsheet into PDF form fields in one or multiple PDF form files.
+* **Bulk Email**<p>
+  Email generated PDF files to one or multiple email recipients. Subject line and email body are customizable using spreadsheet records.
+* **Secure PDF**<p>
+  PDF documents may be encrypted and can be decrypted using a master key or record-specific key.
 
-# Install
+# Installation
 
-Download and install the latest [Java SE Runtime Environment 1.8](http://www.oracle.com/technetwork/java/javase/downloads/jre8-downloads-2133155.html)
+Download and install the latest [Java SE Runtime Environment 1.8](http://www.oracle.com/technetwork/java/javase/downloads/jre8-downloads-2133155.html).
 
 Download the latest released version of the [PDF Filler application](https://github.com/it-gssb/pdffiller). 
 The distribution file `pdffiller-<version number>.zip` contains folders with the following structure:
 
 ```
   pdffiller-<version>
-   |
-   |-- bin
-   |-- conf
-   |-- lib
+       |-- bin
+       |-- conf
+       |-- lib
 ```
 
 The `bin` folder contains the Linux and Windows `pdffiller` shells that are used to invoke the application from the command line.
