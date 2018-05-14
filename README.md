@@ -239,7 +239,7 @@ PDF Filler has the following runtime dependencies on third party open source com
 * Apache POI 3.17 and dependencies on Apache Commons Collections 4.1 and Apache Commons Codec 1.10
 * Apache POI OOXML 3.17 and dependencies on Apache POI OOXML Schemas 3.17, Apache XML Beans 2.6.0, Stax API 1.0.1, Virtuald Curves API 1.04
 * Javax Mail 1.6.1 and dependency on Javax Activation 1.1
-* Sun SMPT 1.6.1 and dependencies on Sun Mail API 1.6.1 and Javax Activation 1.1
+* Sun SMTP 1.6.1 and dependencies on Sun Mail API 1.6.1 and Javax Activation 1.1
 * Spullara Mustache Java compiler 0.9.5
 * Apache Log4j 2.11.0
 
