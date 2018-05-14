@@ -175,10 +175,10 @@ applicationDistribution.from('src/bin') {
    include "*.bat"
 }
 
-//   applicationDistribution.from('src/main/resources') {
-//      into "xslt"
-//      include "*.xsl"
-//   }
+   applicationDistribution.from('.') {
+      into "conf"
+      include "LICENSE"
+   }
 
 // Scripts
 
