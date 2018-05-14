@@ -318,19 +318,16 @@ class VersionInfo {
    Integer major
    Integer minor
    Integer patch
-   Integer patch2
-   Integer patch3
    String buildDay
    String buildTime
    Integer buildNumber
    Boolean isRelease
 
-   VersionInfo(Integer major, Integer minor, Integer patch, Integer patch2, Integer patch3, Integer buildNumber, String buildDay, String buildTime, Boolean isRelease) {
+   VersionInfo(Integer major, Integer minor, Integer patch, Integer buildNumber, String buildDay, String buildTime, Boolean isRelease) {
       this.major = major
       this.minor = minor
       this.patch = patch
-      this.patch2 = patch2
-      this.patch3 = patch3
+
       this.buildNumber = buildNumber
       this.isRelease = isRelease
       this.buildDay = buildDay
@@ -339,7 +336,6 @@ class VersionInfo {
 
    String toString() {
       "$major.$minor.$patch${isRelease ? '' :'-'+buildNumber + '-SNAPSHOT'}"
-//      "$major.$minor.$patch.$patch2.$patch3-$buildNumber${isRelease ? '' : '-SNAPSHOT'}"
    }
 }
 
@@ -358,8 +354,6 @@ VersionInfo readVersionInfo(propertiesFile) {
    new VersionInfo(props.'product.version.major'.toInteger(),
          props.'product.version.minor'.toInteger(),
          props.'product.version.patch'.toInteger(),
-         props.'product.version.patch2'.toInteger(),
-         props.'product.version.patch3'.toInteger(),
          props.'build.number'.toInteger(),
          props.'build.date',
          props.'build.time',
