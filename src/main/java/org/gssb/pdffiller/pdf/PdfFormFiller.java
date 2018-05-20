@@ -19,8 +19,12 @@ import org.gssb.pdffiller.excel.ExcelCell;
 import org.gssb.pdffiller.excel.ExcelRow;
 
 public class PdfFormFiller {
-   private final static Logger logger = LogManager.getLogger(PdfFormFiller.class);
    
+   private final static Logger logger =
+                        LogManager.getLogger(PdfFormFiller.class);
+   
+   private static final String NOT_PDF_ERROR = 
+         "Error: Header doesn't contain versioninfo";
    private static final String NON_FORM_WARN = 
          "The file '%s' does not contain a PDF form and will be copied as is.";
    
@@ -34,7 +38,8 @@ public class PdfFormFiller {
       ap.setCanFillInForm(false);
       ap.setCanModify(false);
 
-      StandardProtectionPolicy spp = new StandardProtectionPolicy(masterKey, key, ap);
+      StandardProtectionPolicy spp = new StandardProtectionPolicy(masterKey,
+                                                                  key, ap);
       spp.setEncryptionKeyLength(KEY_STRENGTH);
       spp.setPermissions(ap);
       pdf.protect(spp);
@@ -54,11 +59,19 @@ public class PdfFormFiller {
    
    public boolean isPdfForm(final File pdfFile) 
                   throws IOException, InvalidPasswordException{
-      PDDocument pdf = PDDocument.load(pdfFile);
-      PDDocumentCatalog docCatalog = pdf.getDocumentCatalog();
-      PDAcroForm acroForm = docCatalog.getAcroForm();
-      boolean isPDFForm = acroForm!=null; 
-      pdf.close();
+      boolean isPDFForm;
+      try (PDDocument pdf = PDDocument.load(pdfFile)){
+         PDDocumentCatalog docCatalog = pdf.getDocumentCatalog();
+         PDAcroForm acroForm = docCatalog.getAcroForm();
+         isPDFForm = acroForm!=null; 
+      } catch (IOException e) {
+         if (e.getMessage().contains(NOT_PDF_ERROR)) {
+            // not and PDF document
+            isPDFForm = false;
+         } else {
+            throw e;
+         }
+      }
       
       return isPDFForm;
    }
