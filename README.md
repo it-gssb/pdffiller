@@ -78,7 +78,7 @@ mappings.\<alias\> | N | Defines for PDF template with alias name <alias> a list
 
 The option to map PDF form columns to spreadsheet columns is useful if you need to map data to PDF forms for which you cannot define the column names.
 
-:heavy_exclamation_mark: Please note that PDF files **without** a form will not be used to generate a derived PDF document. However, the original PDF document will be included into emails. This feature is helpful for emailing plain PDF documents with generated documents. 
+:heavy_exclamation_mark: Please note that PDF files **without** a form or a file with a non-PDF type will not be used to generate a derived PDF document. However, the original document will be included into emails. This feature is helpful for emailing unmodified documents in addition to generated ones. 
 
 #### Example Configuration
 
@@ -126,7 +126,7 @@ Configuration Key          | Mandatory | Description
 -------------------------- | --------- | ---------------------------------------
 choice.\<name\>.select | Y | A list of selection criteria \<value\> : \<alias\>. \<value\> defines the expected value and \<alias\> is the PDF file alias defined in the template.\<alias\> configuration.
 choice.\<name\>.selectcolumn | N | Column in the spreadsheet that defines the value used for selecting a PDF Form template. The default value is `Template`.
-choice.\<name\>.basename | N | Is used as the value of the system variable '\_BaseName\_`. The default value is the template file name without its type postfix. 
+choice.\<name\>.basename | N | Is used as the value of the system variable `\_BaseName\_`. The default value is the template file name without its type postfix. 
 
 :heavy_exclamation_mark: PDF form templates are always processed if they are not referenced in any choice definition.
 
