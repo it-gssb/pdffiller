@@ -9,7 +9,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -226,7 +225,7 @@ public class BulkPdf {
    private List<File> createPdfFiles(final String rootPath, final ExcelRow row,
                                     final String masterKey,
                                     final String secretColumnName,
-                                    final Set<Template> alwaysInclude,
+                                    final List<Template> alwaysInclude,
                                     final List<Choice> choices,
                                     final Map<String, Map<String, String>> formFieldMaps) {
       List<File> createdFiles =
@@ -248,7 +247,7 @@ public class BulkPdf {
                                       final String sheetName,
                                       final String masterKey,
                                       final String secretColumnName,
-                                      final Set<Template> alwaysInclude,
+                                      final List<Template> alwaysInclude,
                                       final List<Choice> choices,
                                       final Map<String, Map<String, String>> formFieldMaps) {
       String excelPath = rootPath + File.separator + this.sourceFolder +

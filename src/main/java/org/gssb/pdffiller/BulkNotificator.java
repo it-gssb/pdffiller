@@ -4,7 +4,6 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.apache.commons.cli.BasicParser;
@@ -156,7 +155,7 @@ public class BulkNotificator {
       try {
          TemplateBuilder choiceBuilder = 
                createTemplateBuilder(config, properties);
-         Set<Template> alwaysInclude = choiceBuilder.allwaysInclude();
+         List<Template> alwaysInclude = choiceBuilder.allwaysInclude();
          List<Choice>  choices = choiceBuilder.collectChoices();
          
          // pdf key -> (acro field -> spreadsheet field)

@@ -6,7 +6,6 @@ import java.io.File;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Optional;
-import java.util.Set;
 
 import org.gssb.pdffiller.config.AppProperties;
 import org.gssb.pdffiller.exception.UnrecoverableException;
@@ -59,7 +58,7 @@ public class TemplateBuilderTest {
    
    @Test
    public void testAlwaysInclude() {
-      Set<Template> always = this.select.allwaysInclude();
+      List<Template> always = this.select.allwaysInclude();
       assertNotNull(always);
       assertEquals(1, always.size());
       assertEquals("pdf1", always.iterator().next().getKey());

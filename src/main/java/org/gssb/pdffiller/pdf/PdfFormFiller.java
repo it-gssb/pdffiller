@@ -99,7 +99,6 @@ public class PdfFormFiller {
             ExcelCell cell = excelRow.getRow().get(columnName);
             
             if (cell==null) continue;
-            
             setField(acroForm, acroFieldName, cell.getColumnValue());
          }
          

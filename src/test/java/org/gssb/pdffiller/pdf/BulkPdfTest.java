@@ -11,11 +11,9 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.apache.poi.EncryptedDocumentException;
@@ -167,7 +165,7 @@ public class BulkPdfTest extends PDFValidator {
       
       Template template =
             TemplateHelper.createTemplate("pdf1", Paths.get(TEMPLATE1));
-      Set<Template> alwaysInclude = new HashSet<>();
+      List<Template> alwaysInclude = new ArrayList<>();
       alwaysInclude.add(template);
       
       List<Choice> choices = createMockChoices("AATG Cert");

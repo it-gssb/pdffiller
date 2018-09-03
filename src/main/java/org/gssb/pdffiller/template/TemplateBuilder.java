@@ -3,8 +3,10 @@ package org.gssb.pdffiller.template;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -18,6 +20,10 @@ public class TemplateBuilder {
          "The choice configuration '%s' does not define a mapping.";
    private final static String UNDEFINED_TEMPLATE   =
          "Undefined template '%s' referenced in choice options %s.";
+   
+   private final Comparator<Entry<String, Template>> templateComparator =
+         (Entry<String, Template> e1, Entry<String, Template> e2) ->
+                                       e1.getKey().compareTo(e2.getKey());
    
    private final String folderPath;
    private final AppProperties props;
@@ -99,8 +105,16 @@ public class TemplateBuilder {
                    .distinct()
                    .collect(Collectors.toSet());
    }
+
+   private List<Template> sortedTemplate(final Map<String, Template> templates) {
+      return templates.entrySet()
+                      .stream()
+                      .sorted(templateComparator)
+                      .map(e -> e.getValue())
+                      .collect(Collectors.toList());
+   }
    
-   public Set<Template> allwaysInclude() {
+   public List<Template> allwaysInclude() {
       Map<String, Template> templates = getTemplates();
       Set<String> usedInChoices =
             collectChoices().stream()
@@ -108,11 +122,11 @@ public class TemplateBuilder {
                             .distinct()
                             .collect(Collectors.toSet());
       
-      return templates.values()
+      return sortedTemplate(templates)
                       .stream()
                       .filter(t -> !usedInChoices.contains(t.getKey()))
-                      .collect(Collectors.collectingAndThen(Collectors.toSet(),
-                                                            Collections::unmodifiableSet));
+                      .collect(Collectors.collectingAndThen(Collectors.toList(),
+                                                            Collections::unmodifiableList));
    }
 
 }
