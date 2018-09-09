@@ -3,6 +3,7 @@ package org.gssb.pdffiller.email;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.PrintStream;
 import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -44,11 +45,12 @@ public class BulkEmail {
    private final static Logger logger = LogManager.getLogger(BulkEmail.class);
 
    private final static String EOL = System.getProperty("line.separator");
+   
+   private static final String CHARACTER_SET = "utf-8";
 
    private static final String MISSING_COLUMN =
          "The spreadsheet does not contain the columns %s that define " +
          "target email addresses.";
-   
 
    private static final String CREATE_SUBJECT_ERROR = 
          "An unexpected error occured when creating the subject text " +
@@ -66,15 +68,24 @@ public class BulkEmail {
          "The email message to be sent to %s contains an undefined variable.";
 
    private static final String UNKNOWN_ERROR =
-         "Email server was unable to deliver message to %s due to an " +
-         "unknown issue. The email was not sent.";
+         "Email server was unable to deliver message in record %s to %s " +
+         "due to an unknown issue. The email was not sent.";
 
    private static final String SERVER_ERROR = 
-         "Email server was unable to deliver message to %s. The email was not sent.";
+         "Email server was unable to deliver message of record %s to %s. " +
+         "The email was not sent.";
+   
+   private static final String CONNECTION_ERROR =
+         "Unable to connect to email server after %s retries.";
+   
+   private static final String EMAIL_SENT =
+         "Sent message of record %s to email addresses %s.";
 
    private static final String SEND_ERROR = 
-         "Email to %s could not be delivered. The email was not sent.";
+         "Emails sent to '%s' and emails not delivered to '%s'.";
 
+   private final PrintStream outstream;
+   
    private final int retries;
    private final int waitTime;
    private final int timeout;
@@ -85,20 +96,33 @@ public class BulkEmail {
    
    private final List<String> emailColumns;
 
-   public BulkEmail(final AppProperties props) {
+   BulkEmail(final AppProperties props, final PrintStream outstream) {
       super();
       this.retries = props.getEmailSendRetries();
       this.waitTime = props.getEmailWaitTime();
       this.timeout = props.getEmailTimeout();
-      this.emailColumns = props.getTargetEmailAddresses();
+      this.emailColumns = props.getTargetEmailColumns();
       this.subjectTemplate = props.getEmailSubjectMessage();
       this.bodyTemplateFileName = props.getEmailBodyFile();
       this.sourceFolder = props.getSourceFolder();
+      this.outstream = outstream;
+   }
+   
+   public BulkEmail(final AppProperties props) {
+      this(props, System.out);
+   }
+   
+   private void printProgress(final int count, final char character) {
+      if (count % 100 == 0) {
+         this.outstream.println(character);
+      } else {
+         this.outstream.print(character);
+      }
    }
 
-   private Session createSession(final String host, final String port,
-                                 final String userName,
-                                 final String password) {
+   // protected to  enable testing of failure cases
+   protected Session createSession(final String host, final String port,
+                                   final String userName, final String password) {
       // sets SMTP server properties
       Properties properties = new Properties();
       properties.put("mail.smtp.host", host);
@@ -131,7 +155,7 @@ public class BulkEmail {
                                            final String body,
                                            final List<File> attachedFiles)
                             throws MessagingException {
-      Message msg = new MimeMessage(session);
+      MimeMessage msg = new MimeMessage(session);
 
       try {
          msg.setFrom(new InternetAddress(userName, fromAddress));
@@ -147,12 +171,13 @@ public class BulkEmail {
       }
 
       msg.setRecipients(Message.RecipientType.TO, toAddresses);
-      msg.setSubject(subject);
+      
+      msg.setSubject(subject, CHARACTER_SET);
       msg.setSentDate(new Date());
 
       // creates message part
       MimeBodyPart messageBodyPart = new MimeBodyPart();
-      messageBodyPart.setContent(body, "text/plain");
+      messageBodyPart.setContent(body, "text/plain; charset=" + CHARACTER_SET);
 
       // creates multi-part
       Multipart multipart = new MimeMultipart();
@@ -206,15 +231,14 @@ public class BulkEmail {
             lastException = e;
          }
          count++;
-         System.err.print("r");
+         printProgress(count, 'R');
          try {
             Thread.sleep(this.waitTime); // sleep a bit before retrying
          } catch (InterruptedException e) {
             logger.debug("Done waiting before attempting to connect to email server.");
          }
       }
-      String msg = "Unable to connect to email server after " +
-                    retries + " retries.";
+      String msg = String.format(CONNECTION_ERROR, retries);
       logger.error(msg, lastException);
       throw new UnrecoverableException(msg, lastException);
    }
@@ -236,42 +260,109 @@ public class BulkEmail {
       }
       return addresses;
    }
-
-   private void sendMessages(final Session session,
-                             final List<Message> messages) {
-      int sentEmails = 0;
-      Transport t = getTransport(session);
+   
+   private String getRecipients(final Address[] addresses) {
+      String addressText;
       try {
-         for (Message message : messages) {
-            try {
-               message.saveChanges();
-               t.sendMessage(message, message.getAllRecipients());
-               System.out.print(".");
+         addressText = getAddressList(addresses);
+      } catch (MessagingException e) {
+         logger.warn("Unable to get email addresses from message.", e);
+         addressText = "unknown email addresses";
+      }
+      return addressText;
+   }
+
+   private int sendMessage(final Transport t, final Message message,
+                           final int index, final int alreadyProcessed) {
+      int successCode = 0; // no error
+      try {
+         message.saveChanges();
+         t.sendMessage(message, message.getAllRecipients());
+      } catch (SendFailedException e) {
+         String msg = String.format(SEND_ERROR, 
+                                    getRecipients(e.getValidSentAddresses()),
+                                    getRecipients(e.getValidUnsentAddresses()));
+         logger.error(msg, e);
+         successCode = 1; // unable to send to at least one address
+      } catch (MessagingException e) {
+         String msg = String.format(SERVER_ERROR, alreadyProcessed + index,
+                                    getRecipients(message));
+         logger.error(msg, e);
+         throw new BulkEmailException(msg, e, index);
+      } catch (RuntimeException e) {
+         String msg = String.format(UNKNOWN_ERROR, alreadyProcessed + index,
+                                    getRecipients(message));
+         logger.error(msg, e);
+         throw new UnrecoverableException(msg, e);
+      }
+      return successCode; 
+   }
+   
+   private int sendMessages(final Session session,
+                            final List<Message> messages,
+                            final int alreadyProcessed) {
+      int processed = 0;
+      int sentEmails = 0;
+      try (Transport t = getTransport(session)) {
+         for (int i=0; i < messages.size(); i++) {
+            Message message = messages.get(i);
+            int successCode = sendMessage(t, message, i, alreadyProcessed);
+            processed++;
+            if (successCode == 0) {
                sentEmails++;
-               logger.info("Sent message to email address " + 
-                            getAddressList(message.getAllRecipients()));
-            } catch (SendFailedException e) {
-               String msg = String.format(SEND_ERROR, getRecipients(message));
-               logger.error(msg, e);
-            } catch (MessagingException e) {
-               String msg = String.format(SERVER_ERROR, getRecipients(message));
-               logger.error(msg, e);
-            } catch (RuntimeException e) {
-               String msg = String.format(UNKNOWN_ERROR, getRecipients(message));
-               logger.error(msg, e);
-               throw new UnrecoverableException(msg, e);
+               printProgress(alreadyProcessed + processed, '.');
+               try {
+                  String msg = String.format(EMAIL_SENT, alreadyProcessed + i,
+                                             getAddressList(message.getAllRecipients()));
+                  logger.info(msg);
+               } catch (MessagingException e) {
+                  logger.debug("Could not log email address for record " + 
+                               sentEmails);
+               }
+            } else {
+               // at least one email recipient was not reached
+               printProgress(alreadyProcessed + processed, 'a');
             }
          }
-      } finally {
+      } catch (MessagingException e) {
+         logger.warn("Unable to close email transportation layer.", e);
+      } 
+      return sentEmails;
+   }
+
+   private int sendMessagesWithRetry(final Session session,
+                                      final List<Message> messages) {
+      int emailsSent = 0;
+      Exception lastException = null;
+      int retriedCount = 0;
+      int messageIndex = 0;
+      while (retriedCount < this.retries) {
          try {
-            t.close();
-         } catch (MessagingException e) {
-            logger.warn("Unable to close email transportation layer.", e);
+            emailsSent += sendMessages(session, messages.subList(messageIndex,
+                                                                 messages.size()),
+                                       messageIndex);
+            // exit retry loop after messages were sent successfully 
+            return emailsSent;
+         } catch (BulkEmailException e) {
+            int failedIndex = e.getErrorMessageIndex();
+            if (failedIndex == 0) {
+               // increment retry count only if no message was sent
+               retriedCount++;
+            }
+            // increment message index to failed message to prepare retry
+            messageIndex += failedIndex;
+            emailsSent += failedIndex; // TODO - approximation 
+         }
+         printProgress(messageIndex, 'r');
+         try {
+            Thread.sleep(this.waitTime); // sleep a bit before retrying
+         } catch (InterruptedException e) {
+            logger.debug("Done waiting before attempting to connect to email server.");
          }
       }
-      System.out.println();
-      System.out.println(sentEmails + " of " + messages.size() +
-                         " possible emails were sent.");
+      String msg = "Unable to send email after " + retries + " retries.";
+      logger.error(msg, lastException);
+      throw new UnrecoverableException(msg, lastException);
    }
 
    private String getTextFromMessage(Message message) 
@@ -350,6 +441,41 @@ public class BulkEmail {
                  .collect(Collectors.toList());
    }
 
+   private String createSubjectMessage(final TextBuilder textBuilder, 
+                                       final ExcelRow row,
+                                       final String recipients) {
+      try {
+         return textBuilder.substitute(subjectTemplate, row.getRowMap());
+      } catch (IOException e) {
+         String msg = String.format(CREATE_SUBJECT_ERROR, recipients);
+         logger.error(msg, e);
+         throw new UnrecoverableException(msg, e);
+      } catch(MustacheException e) {
+         String msg = String.format(CREATE_SUBJECT_SUB_ERROR, recipients) +
+                                    e.getMessage();
+         logger.error(msg, e);
+         throw new UnrecoverableException(msg, e);
+      }
+   }
+   
+   private String createEmailBodyMessage(final TextBuilder textBuilder,
+                                         final File bodyTemplate,
+                                         final ExcelRow row,
+                                         final String recipients) {
+      try {
+         return textBuilder.substitute(bodyTemplate, row.getRowMap());
+      } catch (IOException e) {
+         String msg = String.format(CREATE_BODY_ERROR, recipients);
+         logger.error(msg, e);
+         throw new UnrecoverableException(msg, e);
+      } catch(MustacheException e) {
+         String msg = String.format(CREATE_BODY_SUB_ERROR, recipients) +
+                      e.getMessage();
+         logger.error(msg, e);
+         throw new UnrecoverableException(msg, e);
+      }
+   }
+
    public void sendEmails(final List<UnitOfWork> createdUnits,
                           final String root,
                           final boolean simulate, 
@@ -365,7 +491,7 @@ public class BulkEmail {
       File bodyTemplate = new File (new File(root, this.sourceFolder), 
                                     this.bodyTemplateFileName);
       
-      System.out.println();
+      this.outstream.println();
       for (UnitOfWork unit : createdUnits) {
          ExcelRow row = unit.getRow();
          List<File> attachedFiles = unit.getGeneratedFiles();
@@ -377,6 +503,8 @@ public class BulkEmail {
                         "' because the required email address was unavailable.");
             continue;
          }
+         String recipients = emails.stream() 
+                                   .collect(Collectors.joining(","));
 
          boolean allFound = attachedFiles.stream()
                                          .allMatch(f -> f.exists());
@@ -391,44 +519,9 @@ public class BulkEmail {
             continue;
          }
          
-         String subject;
-         try {
-            subject = textBuilder.substitute(subjectTemplate, 
-                                            row.getRowMap());
-         } catch (IOException e) {
-            String recipients = emails.stream() 
-                                      .collect(Collectors.joining(","));
-            String msg = String.format(CREATE_SUBJECT_ERROR, recipients);
-            logger.error(msg, e);
-            throw new UnrecoverableException(msg, e);
-         } catch(MustacheException e) {
-            String recipients = emails.stream() 
-                  .collect(Collectors.joining(","));
-            String msg = String.format(CREATE_SUBJECT_SUB_ERROR, recipients) +
-                         e.getMessage();
-            logger.error(msg, e);
-            throw new UnrecoverableException(msg, e);
-         }
-         
-         String message;
-         try {
-            message = textBuilder.substitute(bodyTemplate,
-                                             row.getRowMap());
-         } catch (IOException e) {
-            String recipients = emails.stream() 
-                                      .collect(Collectors.joining(","));
-            String msg = String.format(CREATE_BODY_ERROR, recipients);
-            logger.error(msg, e);
-            throw new UnrecoverableException(msg, e);
-         } catch(MustacheException e) {
-            String recipients = emails.stream() 
-                  .collect(Collectors.joining(","));
-            String msg = String.format(CREATE_BODY_SUB_ERROR, recipients) +
-                         e.getMessage();
-            logger.error(msg, e);
-            throw new UnrecoverableException(msg, e);
-         }
-
+         String subject = createSubjectMessage(textBuilder, row, recipients);
+         String message = createEmailBodyMessage(textBuilder, bodyTemplate,
+                                                 row, recipients);
          Optional<Message> msg;
          try {
             msg = createMessage(session, userName, fromAddress, emails,
@@ -449,8 +542,12 @@ public class BulkEmail {
             logger.info(renderMessage(m));
          }
       } else {
-         sendMessages(session, messages);
+         int emailsSent = sendMessagesWithRetry(session, messages);
+         this.outstream.println();
+         this.outstream.println("Sent " + emailsSent + " of " +
+                                messages.size() + " possible emails.");
       }
    }
+
 
 }

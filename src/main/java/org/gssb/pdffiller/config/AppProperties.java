@@ -116,7 +116,7 @@ public class AppProperties extends AbstractConfiguration {
       return value;
    }
    
-   public List<String> getTargetEmailAddresses() {
+   public List<String> getTargetEmailColumns() {
       List<String> values = getPropertyList(XLS_TARGET_EMAIL_COLUMNS_KEY);
       if (values==null || values.isEmpty()) {
          return XLS_TARGET_EMAIL_COLUMNS_DEFAULT;

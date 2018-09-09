@@ -4,8 +4,10 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
+import java.io.PrintStream;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -26,6 +28,7 @@ import org.gssb.pdffiller.template.Choice;
 import org.gssb.pdffiller.template.Template;
 import org.gssb.pdffiller.template.TemplateHelper;
 import org.gssb.pdffiller.text.TextBuilder;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -42,6 +45,7 @@ public class BulkPdfTest extends PDFValidator {
    private final static String MASTER_KEY =  "MASTER";
    private final static String FILE_NAME_TEMPLATE = "{{_BaseName_}} - {{Name}}.pdf";
    
+   private PrintStream printStream;
    private RowReader rowReader= null;
    private TextBuilder textBuilder = null;
    private BulkPdf bulkPdf;
@@ -142,6 +146,8 @@ public class BulkPdfTest extends PDFValidator {
    
    @Before
    public void setUp() throws Exception {
+      ByteArrayOutputStream baos = new ByteArrayOutputStream();
+      this.printStream = new PrintStream(baos, true, "UTF-8");
       AppProperties props = mock(AppProperties.class);
       when(props.getSourceFolder()).thenReturn("sources");
       when(props.getGeneratedFolder()).thenReturn("generated");
@@ -152,10 +158,15 @@ public class BulkPdfTest extends PDFValidator {
       this.textBuilder = new TextBuilder();
       PdfFormFiller pdfFormFiller = new PdfFormFiller();
       this.bulkPdf = new BulkPdf(props, this.rowReader, this.textBuilder,
-                                 pdfFormFiller);
+                                 pdfFormFiller, this.printStream);
       deleteGeneratedFiles(new File(GENERATED_DIR));
    }
 
+   @After
+   public void closeResource() throws Exception {
+      this.printStream.close();
+   }
+   
    @Test
    public void testThreeRow() throws EncryptedDocumentException,
                                      InvalidFormatException, IOException {

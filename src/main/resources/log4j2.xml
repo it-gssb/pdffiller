@@ -21,7 +21,7 @@
 	<Loggers>
 		<Root level="debug">
 			<AppenderRef ref="RollingFile" />
-			<AppenderRef ref="STDOUT" level="warn" />
+<!--  			<AppenderRef ref="STDOUT" level="warn" /> -->
 		</Root>
 		<!-- 
 		<logger name="org.gssb.pdffiller.pdf" level="DEBUG"> 

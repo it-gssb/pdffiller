@@ -34,9 +34,9 @@ public class PropertiesTest {
 	@Test
 	public void testExcelSetup() {
 		assertEquals("Ergebnisse", props.getExcelSheetName());
-		assertEquals(2, props.getTargetEmailAddresses().size());
-		assertEquals("PrimaryEmail", props.getTargetEmailAddresses().get(0));
-		assertEquals("SecondaryEmail", props.getTargetEmailAddresses().get(1));
+		assertEquals(2, props.getTargetEmailColumns().size());
+		assertEquals("PrimaryEmail", props.getTargetEmailColumns().get(0));
+		assertEquals("SecondaryEmail", props.getTargetEmailColumns().get(1));
 	}
 	
 	@Test

@@ -35,10 +35,10 @@ public class RowReaderTest {
       assertNotNull(excelRows);
       assertEquals("incorrect count", 5, excelRows.size());
 
-      System.err.println(excelRows.get(0).printHeaders());
-      for (ExcelRow row : excelRows) {
-         System.err.println(row.printValues());
-      }
+//      System.err.println(excelRows.get(0).printHeaders());
+//      for (ExcelRow row : excelRows) {
+//         System.err.println(row.printValues());
+//      }
 
    }
 

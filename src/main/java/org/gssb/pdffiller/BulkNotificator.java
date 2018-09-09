@@ -26,8 +26,11 @@ import org.gssb.pdffiller.template.Template;
 
 @SuppressWarnings("deprecation")
 public class BulkNotificator {
+   
+   private final static String EOL = System.getProperty("line.separator");
+   
 	private final static Logger logger = 
-			             LogManager.getLogger(BulkNotificator.class);
+			               LogManager.getLogger(BulkNotificator.class);
 
 	private static class Configuration {
 	   Path    configFile    = null;
@@ -188,14 +191,18 @@ public class BulkNotificator {
          }
       } catch (UnrecoverableException e) {
          String cause = e.getCause()!=null && e.getCause().getMessage()!=null
-                          ?  " - " + e.getCause().getMessage()
-                          : "";
-         System.err.println("Unable to proceed due to error: " + 
-                             e.getMessage() + cause);
+                             ?  EOL + e.getCause().getMessage()
+                             : "";
+         String msg = "Application stopped after failure and is unable to proceed. ";
+         System.err.println();
+         System.err.println(msg + e.getMessage() + cause);
+         logger.error(msg, e);
          System.exit(1);
       } catch (Throwable e) {
-         System.err.println("An unexpected error occurred: " + e.getMessage());
-         e.printStackTrace();
+         String msg = "Application stopped after an unexpected error occurred: ";
+         System.err.println();
+         System.err.println(msg + e.getMessage());
+         logger.error(msg, e);
          System.exit(1);
       }
 	}

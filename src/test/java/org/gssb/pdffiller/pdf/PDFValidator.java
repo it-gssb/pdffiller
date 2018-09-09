@@ -41,7 +41,6 @@ public class PDFValidator {
       pdfStripper.setEndPage(1);
       String parsedText = pdfStripper.getText(pdDoc);
       
-//      System.out.println(parsedText);
       expected.forEach(
             s -> assertTrue("expected '" + s + "'", parsedText.contains(s)));
    }

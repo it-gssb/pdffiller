@@ -2,6 +2,7 @@ package org.gssb.pdffiller.pdf;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.PrintStream;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -66,6 +67,8 @@ public class BulkPdf {
          "The file name template %s contains an undefined variable.";
    
    private static final String BASE_NAME = "_BaseName_";
+   
+   private final PrintStream outstream;
 
    private final String sourceFolder;
    private final String generatedFolder;
@@ -78,8 +81,8 @@ public class BulkPdf {
    private final String fileNameTemplate;
    
    BulkPdf(final AppProperties properties, final RowReader rowReader,
-           final TextBuilder textBuilder,
-           final PdfFormFiller pdfFormFiller) {
+           final TextBuilder textBuilder, final PdfFormFiller pdfFormFiller,
+           final PrintStream outstream) {
       super();
       this.sourceFolder = properties.getSourceFolder();
       this.generatedFolder = properties.getGeneratedFolder();
@@ -90,10 +93,21 @@ public class BulkPdf {
       this.pdfFormFiller = pdfFormFiller;
       
       this.fileNameTemplate = properties.getFileNameTemplate();
+      
+      this.outstream = outstream;
    }
    
    public BulkPdf(final AppProperties properties) {
-      this(properties, new RowReader(), new TextBuilder(), new PdfFormFiller());
+      this(properties, new RowReader(), new TextBuilder(), new PdfFormFiller(),
+           System.out);
+   }
+   
+   private void printProgress(final int count, final char character) {
+      if (count % 100 == 0) {
+         this.outstream.println(character);
+      } else {
+         this.outstream.print(character);
+      }
    }
    
    protected List<ExcelRow> createRows(final File excelFile,
@@ -254,7 +268,8 @@ public class BulkPdf {
                          File.separator + this.excelInputFile;
       List<ExcelRow> rows = createRows(new File(excelPath), sheetName);
       
-      System.out.println();
+      this.outstream.println();
+      int processed = 0;
       int count = 0;
       List<UnitOfWork> resultSets = new ArrayList<>();
       for (ExcelRow row : rows) {
@@ -263,12 +278,13 @@ public class BulkPdf {
                                                choices, formFieldMaps);
          resultSets.add(new UnitOfWork(row, generated));
          
+         processed++;
          count+=generated.size();
-         System.out.print(".");
+         printProgress(processed, '.');
       }
-      System.out.println();
-      System.out.println("Created " + count + " files for " + rows.size() +
-                         " input rows.");
+      this.outstream.println();
+      this.outstream.println("Created " + count + " files for " + rows.size() +
+                             " input rows.");
       
       return resultSets;
    }
