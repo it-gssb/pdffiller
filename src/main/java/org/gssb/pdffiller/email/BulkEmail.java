@@ -86,13 +86,13 @@ public class BulkEmail {
 
    private final PrintStream outstream;
    
+   private final String emailSendProtocol;
+   
    private final int retries;
    private final int waitTime;
    private final int timeout;
    
    private final String subjectTemplate;
-   private final String bodyTemplateFileName;
-   private final String sourceFolder;
    
    private final List<String> emailColumns;
 
@@ -103,8 +103,7 @@ public class BulkEmail {
       this.timeout = props.getEmailTimeout();
       this.emailColumns = props.getTargetEmailColumns();
       this.subjectTemplate = props.getEmailSubjectMessage();
-      this.bodyTemplateFileName = props.getEmailBodyFile();
-      this.sourceFolder = props.getSourceFolder();
+      this.emailSendProtocol = "smtp";
       this.outstream = outstream;
    }
    
@@ -120,10 +119,10 @@ public class BulkEmail {
       }
    }
 
-   // protected to  enable testing of failure cases
-   protected Session createSession(final String host, final String port,
-                                   final String userName, final String password) {
-      // sets SMTP server properties
+   private Properties setEmailProperties(final String host, 
+                                         final String port,
+                                         final String userName,
+                                         final String password) {
       Properties properties = new Properties();
       properties.put("mail.smtp.host", host);
       properties.put("mail.smtp.port", port);
@@ -136,6 +135,14 @@ public class BulkEmail {
 
       properties.put("mail.user", userName);
       properties.put("mail.password", password);
+      return properties;
+   }
+
+   // protected to  enable testing of failure cases
+   protected Session createSession(final String host, final String port,
+                                   final String userName, final String password) {
+      // sets SMTP server properties
+      Properties properties = setEmailProperties(host, port, userName, password);
 
       // creates a new session with an authenticator
       Authenticator auth = new Authenticator() {
@@ -210,13 +217,20 @@ public class BulkEmail {
 
       return Optional.of(msg);
    }
+   
+   // factory method - for test purposes only!
+   protected Transport createTransport(final Session session,
+                                       final String protocol)
+                       throws NoSuchProviderException {
+      return session.getTransport(protocol);
+   }
 
-   private Transport getTransport(final Session session) {
+   private Transport getTransport(final Session session, final String protocol) {
       Exception lastException = null;
       int count = 0;
       while (count < this.retries) {
          try {
-            Transport t = session.getTransport();
+            Transport t = createTransport(session, protocol);
             t.connect();
             return t;
          } catch (NoSuchProviderException e) {
@@ -227,7 +241,7 @@ public class BulkEmail {
             logger.debug("Failure to connect to email server.", e);
             lastException = e;
          } catch (RuntimeException e) {
-            logger.debug("Unnown issue prevented connection to email server.", e);
+            logger.debug("Unknown issue prevented connection to email server.", e);
             lastException = e;
          }
          count++;
@@ -303,7 +317,7 @@ public class BulkEmail {
                             final int alreadyProcessed) {
       int processed = 0;
       int sentEmails = 0;
-      try (Transport t = getTransport(session)) {
+      try (Transport t = getTransport(session, this.emailSendProtocol)) {
          for (int i=0; i < messages.size(); i++) {
             Message message = messages.get(i);
             int successCode = sendMessage(t, message, i, alreadyProcessed);
@@ -459,11 +473,11 @@ public class BulkEmail {
    }
    
    private String createEmailBodyMessage(final TextBuilder textBuilder,
-                                         final File bodyTemplate,
+                                         final String bodyTemplateText,
                                          final ExcelRow row,
                                          final String recipients) {
       try {
-         return textBuilder.substitute(bodyTemplate, row.getRowMap());
+         return textBuilder.substitute(bodyTemplateText, row.getRowMap());
       } catch (IOException e) {
          String msg = String.format(CREATE_BODY_ERROR, recipients);
          logger.error(msg, e);
@@ -477,19 +491,17 @@ public class BulkEmail {
    }
 
    public void sendEmails(final List<UnitOfWork> createdUnits,
-                          final String root,
-                          final boolean simulate, 
+                          final boolean simulate,
                           final String host, 
-                          final String port,
+                          final String port, 
                           final String userName,
-                          final String fromAddress, 
-                          final String password) {
+                          final String fromAddress,
+                          final String password, 
+                          final String bodyTemplateText) {
       Session session = createSession(host, port, userName, password);
       List<Message> messages = new ArrayList<>();
 
       TextBuilder textBuilder = new TextBuilder();
-      File bodyTemplate = new File (new File(root, this.sourceFolder), 
-                                    this.bodyTemplateFileName);
       
       this.outstream.println();
       for (UnitOfWork unit : createdUnits) {
@@ -508,8 +520,7 @@ public class BulkEmail {
 
          boolean allFound = attachedFiles.stream()
                                          .allMatch(f -> f.exists());
-
-         if (attachedFiles.isEmpty() && allFound) {
+         if (!allFound) {
             String fileNames =
                   attachedFiles.stream()
                                .map(f -> f.getName())
@@ -520,7 +531,7 @@ public class BulkEmail {
          }
          
          String subject = createSubjectMessage(textBuilder, row, recipients);
-         String message = createEmailBodyMessage(textBuilder, bodyTemplate,
+         String message = createEmailBodyMessage(textBuilder, bodyTemplateText,
                                                  row, recipients);
          Optional<Message> msg;
          try {
@@ -548,6 +559,5 @@ public class BulkEmail {
                                 messages.size() + " possible emails.");
       }
    }
-
 
 }

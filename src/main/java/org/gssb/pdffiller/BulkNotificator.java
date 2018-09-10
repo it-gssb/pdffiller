@@ -1,5 +1,9 @@
 package org.gssb.pdffiller;
 
+import java.io.File;
+import java.io.IOException;
+import java.io.UnsupportedEncodingException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
@@ -27,9 +31,7 @@ import org.gssb.pdffiller.template.Template;
 @SuppressWarnings("deprecation")
 public class BulkNotificator {
    
-   private final static String EOL = System.getProperty("line.separator");
-   
-	private final static Logger logger = 
+   private final static Logger logger = 
 			               LogManager.getLogger(BulkNotificator.class);
 
 	private static class Configuration {
@@ -39,6 +41,19 @@ public class BulkNotificator {
 	   String  emailPassword = "";
 	   String  masterKey     = "";
 	}
+	
+   private static final String CHARACTER_SET = "utf-8";
+   
+   private final static String EOL = System.getProperty("line.separator");
+	
+	private final static String INCORRECT_TEMPLATE_FILE_ERROR =
+	      "File '%s' does not exist. Please correct your configurations.";
+	
+	private static final String TEMPLATE_NOT_READ_ERROR =
+	      "The template body located in file '%s' cannot be read.";
+	
+   private static final String EMAIL_BODY_ENCODING_ERROR =
+         "An text encoding error occured after the template body was read.";
 	
 	private final static String INCORRECT_SECRET_COLUMN =
 	      "The defined secret column %s is not available in the " +
@@ -152,6 +167,42 @@ public class BulkNotificator {
 	                                              k -> properties.getMappings(k)));
 	}
 	
+   private void deliverEmails(final List<UnitOfWork> createdUnits, 
+                              final Configuration config,
+                              final AppProperties properties) { 
+      File bodyTemplate = new File (new File(config.root,
+                                             properties.getSourceFolder()), 
+                                    properties.getEmailBodyFile());
+      if (bodyTemplate.isDirectory() || !bodyTemplate.exists()) {
+         String msg = String.format(INCORRECT_TEMPLATE_FILE_ERROR, 
+                                    bodyTemplate.getAbsolutePath());
+         throw new UnrecoverableException(msg);
+      }
+    
+      String bodyTemplateText;
+      try {
+         byte[] encoded = Files.readAllBytes(Paths.get(bodyTemplate.toURI()));
+         bodyTemplateText = new String(encoded, CHARACTER_SET);
+      } catch (UnsupportedEncodingException e) {
+         String msg = String.format(EMAIL_BODY_ENCODING_ERROR);
+         logger.error(msg, e);
+         throw new UnrecoverableException(msg, e);
+      } catch (IOException e) {
+         String msg = String.format(TEMPLATE_NOT_READ_ERROR,
+                                    bodyTemplate.getAbsolutePath());
+         logger.error(msg, e);
+         throw new UnrecoverableException(msg, e);
+      }
+      
+      BulkEmail bulkEmail = createBulkEmail(properties);
+      bulkEmail.sendEmails(createdUnits, config.simulate,
+                           properties.getEmailHost(),
+                           properties.getEmailPort(), 
+                           properties.getEmailAddress(),
+                           properties.getEmailReturnAddress(),
+                           config.emailPassword, bodyTemplateText);
+   }
+	
    	public void run(final String[] args) {
 	   Configuration config = parse(args);
       AppProperties properties = createConfiguration(config);
@@ -177,17 +228,11 @@ public class BulkNotificator {
          } catch (ColumnNotFoundException e) {
             String msg = String.format(INCORRECT_SECRET_COLUMN,
                                        secretColumnName);
+            logger.error(msg, e);
             throw new UnrecoverableException(msg, e);
          }
          if (!config.emailPassword.isEmpty()) {
-            BulkEmail bulkEmail = createBulkEmail(properties);
-            bulkEmail.sendEmails(createdUnits, config.root,
-                                 config.simulate,
-                                 properties.getEmailHost(), 
-                                 properties.getEmailPort(),
-                                 properties.getEmailAddress(),
-                                 properties.getEmailReturnAddress(),
-                                 config.emailPassword);
+            deliverEmails(createdUnits, config, properties);
          }
       } catch (UnrecoverableException e) {
          String cause = e.getCause()!=null && e.getCause().getMessage()!=null
@@ -205,6 +250,7 @@ public class BulkNotificator {
          logger.error(msg, e);
          System.exit(1);
       }
+      System.exit(0);
 	}
 
 	/**
