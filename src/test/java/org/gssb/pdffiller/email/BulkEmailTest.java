@@ -35,7 +35,7 @@ public class BulkEmailTest {
    private String bodyTemplateText;
    private MockProvider mockProvider = 
          new MockProvider(Type.TRANSPORT, "smtp", 
-                          MockTransport.class.getCanonicalName(), "UGBU", "0.1");
+                          MockTransport.class.getCanonicalName(), "GSSB", "0.1");
    
    private List<MockTransport> usedTransports = new ArrayList<>();
    
