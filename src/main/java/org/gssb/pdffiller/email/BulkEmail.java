@@ -112,7 +112,7 @@ public class BulkEmail {
    }
    
    private void printProgress(final int count, final char character) {
-      if (count % 100 == 0) {
+      if (count>0 && count % 100 == 0) {
          this.outstream.println(character);
       } else {
          this.outstream.print(character);
@@ -297,7 +297,8 @@ public class BulkEmail {
                                     getRecipients(e.getValidSentAddresses()),
                                     getRecipients(e.getValidUnsentAddresses()));
          logger.error(msg, e);
-         successCode = 1; // unable to send to at least one address
+         // unable to send to at least one address
+         successCode = e.getValidUnsentAddresses().length;
       } catch (MessagingException e) {
          String msg = String.format(SERVER_ERROR, alreadyProcessed + index,
                                     getRecipients(message));
@@ -335,7 +336,11 @@ public class BulkEmail {
                }
             } else {
                // at least one email recipient was not reached
-               printProgress(alreadyProcessed + processed, 'a');
+               char status = 'a';
+               if (message.getAllRecipients().length == successCode) {
+                  status = 'A';
+               }
+               printProgress(alreadyProcessed + processed, status);
             }
          }
       } catch (MessagingException e) {
@@ -365,7 +370,8 @@ public class BulkEmail {
             }
             // increment message index to failed message to prepare retry
             messageIndex += failedIndex;
-            emailsSent += failedIndex; // TODO - approximation 
+            emailsSent += failedIndex; // TODO - approximation
+            lastException = e;
          }
          printProgress(messageIndex, 'r');
          try {

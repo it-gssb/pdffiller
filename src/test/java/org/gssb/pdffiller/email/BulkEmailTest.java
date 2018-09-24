@@ -5,8 +5,11 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import java.io.ByteArrayOutputStream;
+import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.PrintStream;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -17,6 +20,7 @@ import javax.mail.BodyPart;
 import javax.mail.Message;
 import javax.mail.MessagingException;
 import javax.mail.NoSuchProviderException;
+import javax.mail.Part;
 import javax.mail.Provider.Type;
 import javax.mail.internet.MimeMultipart;
 import javax.mail.Session;
@@ -25,12 +29,19 @@ import javax.mail.Transport;
 import org.gssb.pdffiller.config.AppProperties;
 import org.gssb.pdffiller.excel.ExcelCell;
 import org.gssb.pdffiller.excel.ExcelRow;
+import org.gssb.pdffiller.exception.UnrecoverableException;
 import org.gssb.pdffiller.pdf.UnitOfWork;
 import org.junit.Before;
 import org.junit.Test;
 
 public class BulkEmailTest {
+   
+   private final static String ROOT = "src/test/resources/2018";
+   private final static String TEMPLATE1 = ROOT + "/sources/AATG Raw Score.pdf";
+   
+   private final static int RETRIES = 3;
 
+   private ByteArrayOutputStream baos;
    private PrintStream printStream;
    private String bodyTemplateText;
    private MockProvider mockProvider = 
@@ -41,18 +52,34 @@ public class BulkEmailTest {
    
    @Before
    public void setUp() throws Exception {
-      ByteArrayOutputStream baos = new ByteArrayOutputStream();
+      setFailures(0,0,0,0, true); // reset to default no failures
+      this.baos = new ByteArrayOutputStream();
       this.printStream = new PrintStream(baos, true, "UTF-8");
       
       this.bodyTemplateText = "The email body for student {{Name}}.";
    }
    
-   private BulkEmail createBulkEmail() {
+   private void setFailures(final int connectionFailures, 
+                            final int conectionFailureDelay,
+                            final int sendFailures,
+                            final int sendFailureDelay, 
+                            final boolean useMessagingException) {
+         MockTransport.setConectionFailures(connectionFailures,
+                                            conectionFailureDelay);
+         MockTransport.setSendFailures(sendFailures, sendFailureDelay);
+         MockTransport.setMessagingException(useMessagingException);
+   }
+   
+   private BulkEmail createBulkEmail(final boolean oneRecipient) {
       AppProperties props = mock(AppProperties.class);
-      when(props.getEmailSendRetries()).thenReturn(100);
+      when(props.getEmailSendRetries()).thenReturn(RETRIES);
       when(props.getEmailWaitTime()).thenReturn(10);
       when(props.getEmailTimeout()).thenReturn(100);
-      when(props.getTargetEmailColumns()).thenReturn(Arrays.asList("email1", "email2"));
+      if (oneRecipient) {
+         when(props.getTargetEmailColumns()).thenReturn(Arrays.asList("email1"));
+      } else {
+         when(props.getTargetEmailColumns()).thenReturn(Arrays.asList("email1", "email2"));
+      }
       when(props.getEmailSubjectMessage()).thenReturn("German Saturday School Boston for {{Name}}");
       when(props.getSourceFolder()).thenReturn("sources");
       
@@ -78,7 +105,8 @@ public class BulkEmailTest {
                                                    final String protocol)
                                    throws NoSuchProviderException {
                   Transport t = super.createTransport(session, protocol);
-                  usedTransports.add((MockTransport)t);
+                  MockTransport mt = (MockTransport)t;
+                  usedTransports.add(mt);
                   return t;
                }
       };
@@ -113,42 +141,93 @@ public class BulkEmailTest {
      }
      return sb.toString();
   }
-   
+
    private String getTextFromMessage(final Message message) 
-         throws MessagingException, IOException {
-    String result = "";
-    if (message.getContent() instanceof MimeMultipart) {
-        MimeMultipart mimeMultipart = (MimeMultipart) message.getContent();
-        result = getTextFromMimeMultipart(mimeMultipart);
-    } else if (message.isMimeType("text/plain")) {
-       result = message.getContent().toString();
-   } 
-    return result;
-}
+                  throws MessagingException, IOException {
+      String result = "";
+      if (message.getContent() instanceof MimeMultipart) {
+         MimeMultipart mimeMultipart = (MimeMultipart) message.getContent();
+         result = getTextFromMimeMultipart(mimeMultipart);
+      } else if (message.isMimeType("text/plain")) {
+         result = message.getContent().toString();
+      }
+      return result;
+   }
+
+   private List<String> getAttachmentNamesFromMimeMultipart(
+                                            final MimeMultipart mimeMultipart)
+                        throws MessagingException, IOException{
+     List<String> attachments = new ArrayList<>();
+     int count = mimeMultipart.getCount();
+     for (int i = 0; i < count; i++) {
+         BodyPart bodyPart = mimeMultipart.getBodyPart(i);
+         if (bodyPart.getContent() instanceof MimeMultipart){
+            attachments.addAll(getAttachmentNamesFromMimeMultipart(
+                                         (MimeMultipart)bodyPart.getContent()));
+         } else if (bodyPart.getContent() instanceof InputStream &&
+                    Part.ATTACHMENT.equalsIgnoreCase(bodyPart.getDisposition()) ||
+                    bodyPart.getFileName()!=null) {
+               attachments.add(bodyPart.getFileName());
+         } 
+     }
+     return attachments;
+  }
    
-   @Test
-   public void test() throws MessagingException, IOException {
-      String[] rowDesc = new String[] { 
-            "email1:p1@domain1.ccc", "email2:p2@domain2.ccc",
-            "Name:Student Name 1" };
+   private List<String> getAttachmentNamesFromMessage(final Message message) 
+                        throws MessagingException, IOException {
+      List<String> result = Collections.emptyList();
+      if (message.getContent() instanceof MimeMultipart) {
+         MimeMultipart mimeMultipart = (MimeMultipart) message.getContent();
+         result = getAttachmentNamesFromMimeMultipart(mimeMultipart);
+      }
+      return result;
+   }
+   
+   private void sendEmails(final int emailCount, boolean oneRecipient) {
+      String[] rowDesc;
+      if (oneRecipient) {
+         rowDesc = new String[] { "email1:p1@domain1.ccc", 
+                                  "Name:Student Name 1" };
+      } else {
+         rowDesc = new String[] { "email1:p1@domain1.ccc", 
+                                  "email2:p2@domain2.ccc",
+                                  "Name:Student Name 1" };
+      }
       
-      UnitOfWork uow = mock(UnitOfWork.class);
-      when(uow.getGeneratedFiles()).thenReturn(Collections.emptyList());
-      when(uow.getRow()).thenReturn(createExcelRow(rowDesc));
+      File attachment1 = new File(TEMPLATE1);
       
-      List<UnitOfWork> work = Arrays.asList(uow);
+      List<UnitOfWork> work = new ArrayList<>();
+      for (int i=0; i< emailCount; i++) {
+         UnitOfWork uow = mock(UnitOfWork.class);
+         when(uow.getGeneratedFiles()).thenReturn(Arrays.asList(attachment1));
+         when(uow.getRow()).thenReturn(createExcelRow(rowDesc));
+         work.add(uow);
+      }
+      
       String host = "localhost";
       String port = "0";
       String userName = "user";
       String fromAddress = "from@userdomain.abc";
       String password = "abc";
       
-      BulkEmail bulkEmail = createBulkEmail();
+      BulkEmail bulkEmail = createBulkEmail(oneRecipient);
       
       bulkEmail.sendEmails(work, false, host, port, userName, fromAddress, 
                            password, bodyTemplateText);
+   }
+   
+   @Test
+   public void testExpectedUseCase() throws MessagingException, IOException {
+      try {
+         sendEmails(1, false);
+      } catch (UnrecoverableException e) {
+         fail("unexpected error ocured when sending email" + e.getMessage());
+      }
       
       assertEquals(1, this.usedTransports.size());
+      
+      // message is not set if sending of message is skipped die to some error conditions
+      assertNotNull(this.usedTransports.get(0).getLastMessage());
       
       Address[] from = this.usedTransports.get(0)
                            .getLastMessage().getFrom();
@@ -167,6 +246,139 @@ public class BulkEmailTest {
       assertEquals("The email body for student Student Name 1.",
                    getTextFromMessage(this.usedTransports.get(0).getLastMessage()));
 
+      List<String> attachments = getAttachmentNamesFromMessage(
+                                         this.usedTransports.get(0)
+                                                            .getLastMessage());
+      assertEquals(1, attachments.size());
+      assertEquals("AATG Raw Score.pdf", attachments.get(0));
+      
    }
 
+   @Test
+   public void testTwoFailuresConnectingToEmailServer() 
+               throws MessagingException, IOException {
+      setFailures(2,0,0,0, true);
+      try {
+         sendEmails(1, false);
+      } catch (UnrecoverableException e) {
+         fail("unexpected error ocured when sending email" + e.getMessage());
+      }
+      String data = new String(baos.toByteArray(), StandardCharsets.UTF_8);
+      assertTrue(data.contains("RR."));     
+   }
+   
+   @Test
+   public void testThreeFailuresConnectingToEmailServer() 
+               throws MessagingException, IOException {
+      setFailures(RETRIES+2,0,0,0, true);
+      try {
+         sendEmails(1, false);
+      } catch (UnrecoverableException e) {
+         assertTrue(e.getCause() instanceof MessagingException);
+         assertEquals("Unable to connect to email server after 3 retries.",
+                      e.getMessage());
+      }
+      String data = new String(baos.toByteArray(), StandardCharsets.UTF_8);
+      assertTrue(data.contains("RRR"));
+      assertEquals(RETRIES, this.usedTransports.size());
+   }
+   
+   @Test
+   public void testProviderFailure() 
+               throws MessagingException, IOException {
+      setFailures(RETRIES+2,0,0,0, false);
+      try {
+         sendEmails(1, false);
+      } catch (UnrecoverableException e) {
+         assertTrue(e.getCause() instanceof MessagingException);
+         assertEquals("Failure to connect to Email server.", e.getMessage());
+      }
+      assertEquals(1, this.usedTransports.size());
+   }
+   
+   @Test
+   public void testTwoFailedEmailDeliveries() 
+               throws MessagingException, IOException {
+      setFailures(0,0,2,0, true);
+      try {
+         sendEmails(1, false);
+      } catch (UnrecoverableException e) {
+         fail("unexpected error ocured when sending email" + e.getMessage());
+      }
+      String data = new String(baos.toByteArray(), StandardCharsets.UTF_8);
+      assertEquals(3, this.usedTransports.size());
+      assertTrue(data.contains("rr."));
+   }
+   
+   @Test
+   public void testThreeFailedEmailDeliveries() 
+               throws MessagingException, IOException {
+      setFailures(0,0,RETRIES+2,0, true);
+      try {
+         sendEmails(1, false);
+      } catch (UnrecoverableException e) {
+         assertTrue(e.getCause() instanceof BulkEmailException);
+         assertTrue(e.getCause().getCause() instanceof MessagingException);
+         assertEquals("Unable to send email after 3 retries.",
+                      e.getMessage());
+      }
+      String data = new String(baos.toByteArray(), StandardCharsets.UTF_8);
+      assertEquals(RETRIES, this.usedTransports.size());
+      assertTrue(data.contains("rrr"));
+   }
+   
+   @Test
+   public void testSendThreeEmailsSuccess() throws MessagingException, IOException {
+      try {
+         sendEmails(3, false);
+      } catch (UnrecoverableException e) {
+         fail("unexpected error ocured when sending email" + e.getMessage());
+      }
+      String data = new String(baos.toByteArray(), StandardCharsets.UTF_8);
+      assertTrue(data.contains("..."));
+      assertEquals(1, this.usedTransports.size());
+   }
+   
+   @Test
+   public void testTwoSuccessAndThirdWithDeliveryFailure() 
+               throws MessagingException, IOException {
+      setFailures(0,0,RETRIES-1,2, true);
+      try {
+         sendEmails(3, false);
+      } catch (UnrecoverableException e) {
+         fail("unexpected error ocured when sending email" + e.getMessage());
+      }
+      String data = new String(baos.toByteArray(), StandardCharsets.UTF_8);
+      assertTrue(data.contains("..rr."));
+      assertEquals(3, this.usedTransports.size());
+   }
+   
+   @Test
+   public void testThreeEmailsOneAddressNotDelivable() 
+               throws MessagingException, IOException {
+      setFailures(0,0,1,2, false);
+      try {
+         sendEmails(3, false);
+      } catch (UnrecoverableException e) {
+         fail("unexpected error ocured when sending email" + e.getMessage());
+      }
+      String data = new String(baos.toByteArray(), StandardCharsets.UTF_8);
+      assertTrue(data.contains("..a"));     
+   }
+   
+   @Test
+   public void ThreeEmailsAllAddressNotDelivable() 
+               throws MessagingException, IOException {
+      setFailures(0,0,1,2, false);
+      try {
+         // all recipient emails will fail to deliver
+         sendEmails(3, true);
+      } catch (UnrecoverableException e) {
+         e.printStackTrace();
+         fail("unexpected error ocured when sending email" + e.getMessage());
+      }
+      String data = new String(baos.toByteArray(), StandardCharsets.UTF_8);
+      assertTrue(data.contains("..A"));     
+   }
+   
 }
