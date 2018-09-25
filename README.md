@@ -1,7 +1,7 @@
 
 # PDF Filler
 
-Tool to support bulk PDF Mail Merge using data in Excel spreadsheet and sending of generated PDF files to email recipients defined in the same spreadsheet.
+Tool to support bulk PDF Mail Merge / PDF Filler using data in Excel spreadsheet and sending of generated PDF files to email recipients defined in the same spreadsheet.
 
 ## Use Cases 
 
