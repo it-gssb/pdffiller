@@ -6,6 +6,8 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.apache.poi.EncryptedDocumentException;
 import org.apache.poi.openxml4j.exceptions.InvalidFormatException;
 import org.apache.poi.ss.usermodel.Cell;
@@ -15,14 +17,20 @@ import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.ss.usermodel.WorkbookFactory;
+import org.gssb.pdffiller.exception.UnrecoverableException;
 
 public class RowReader {
+   
+   private final static Logger logger = LogManager.getLogger(RowReader.class);
+   
+   private static final String MISSING_SHEET_ERROR = 
+         "The Excel sheet %s is not defined in the Excel workbook %s.";
    
    private String getValue(final Cell cell, final FormulaEvaluator evaluator) {
       CellValue cellValue = evaluator.evaluate(cell);
 
       String value;
-      switch (cellValue.getCellTypeEnum()) {
+      switch (cellValue.getCellType()) {
       case BOOLEAN:
          value = Boolean.toString(cellValue.getBooleanValue());
          break;
@@ -75,6 +83,12 @@ public class RowReader {
                                            .createFormulaEvaluator();
 
       Sheet sheet = workbook.getSheet(sheetName);
+      if (sheet == null) {
+         String msg = String.format(MISSING_SHEET_ERROR, sheetName, 
+                                    excelFile.getCanonicalPath());
+         logger.error(msg);
+         throw new UnrecoverableException(msg);
+      }
 
       assert (sheet.getPhysicalNumberOfRows() > 0);
 

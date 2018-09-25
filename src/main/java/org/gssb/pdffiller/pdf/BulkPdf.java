@@ -20,6 +20,7 @@ import org.apache.poi.EncryptedDocumentException;
 import org.apache.poi.openxml4j.exceptions.InvalidFormatException;
 import org.gssb.pdffiller.config.AppProperties;
 import org.gssb.pdffiller.excel.ColumnNotFoundException;
+import org.gssb.pdffiller.excel.ExcelCell;
 import org.gssb.pdffiller.excel.ExcelRow;
 import org.gssb.pdffiller.excel.RowReader;
 import org.gssb.pdffiller.exception.UnrecoverableException;
@@ -65,6 +66,10 @@ public class BulkPdf {
    
    private static final String CREATE_NAME_SUB_ERROR = 
          "The file name template %s contains an undefined variable.";
+   
+   private static final String SECRET_COLUMN_DOES_NOT_EXISTS =
+         "The secret column %s does not exist in the selected " +
+         "Excel workbook sheet.";
    
    private static final String BASE_NAME = "_BaseName_";
    
@@ -176,7 +181,8 @@ public class BulkPdf {
       try {
          if (this.pdfFormFiller.isPdfForm(templatePath.toFile())) {
             targetPdf = getTargetPdf(rootPath, row, templatePath, baseFileName);
-            String secret = row.getValue(secretColumnName).getColumnValue();
+            ExcelCell cell = row.getValue(secretColumnName);
+            String secret = cell!= null ? cell.getColumnValue() : null;
             this.pdfFormFiller
                 .populateAndCopy(templatePath.toFile(), targetPdf, row,
                                  masterKey, formFieldMap, secret);
@@ -267,6 +273,15 @@ public class BulkPdf {
       String excelPath = rootPath + File.separator + this.sourceFolder +
                          File.separator + this.excelInputFile;
       List<ExcelRow> rows = createRows(new File(excelPath), sheetName);
+      
+      if (masterKey!=null && !masterKey.isEmpty() && !rows.isEmpty() && 
+          !secretColumnName.isEmpty() && 
+          rows.get(0).getValue(secretColumnName)==null) {
+         String msg = String.format(SECRET_COLUMN_DOES_NOT_EXISTS, 
+                                    secretColumnName);
+         logger.error(msg);
+         throw new UnrecoverableException(msg);
+      }
       
       this.outstream.println();
       int processed = 0;
