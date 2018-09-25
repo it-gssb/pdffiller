@@ -35,7 +35,7 @@ buildscript {
     }
 
     dependencies {
-        classpath 'com.github.ben-manes:gradle-versions-plugin:0.17.0'
+        classpath 'com.github.ben-manes:gradle-versions-plugin:0.20.0'
    }
 }
 
@@ -86,29 +86,32 @@ repositories {
 
 dependencies {
     // https://mvnrepository.com/artifact/org.apache.commons/commons-collections4
-    compile group: 'org.apache.commons', name: 'commons-collections4', version: '4.1'
+    compile group: 'org.apache.commons', name: 'commons-collections4', version: '4.2'
     // command line
     compile group: 'commons-cli', name: 'commons-cli', version: '1.4'
     // commons configuration
-    compile group: 'org.apache.commons', name: 'commons-configuration2', version: '2.2'
+    compile group: 'org.apache.commons', name: 'commons-configuration2', version: '2.3'
     compile group: 'commons-beanutils', name: 'commons-beanutils', version: '1.9.3'
     // pdf
-    compile group: 'org.apache.pdfbox', name: 'pdfbox', version: '2.0.9'
+    compile group: 'org.apache.pdfbox', name: 'pdfbox', version: '2.0.11'
     // spreadsheet
-    compile group: 'org.apache.poi', name: 'poi', version: '3.17'
-    compile group: 'org.apache.poi', name: 'poi-ooxml', version: '3.17'
+    compile group: 'org.apache.poi', name: 'poi', version: '4.0.0'
+    compile group: 'org.apache.poi', name: 'poi-ooxml', version: '4.0.0'
+    // https://mvnrepository.com/artifact/org.apache.commons/commons-math3
+    compile group: 'org.apache.commons', name: 'commons-math3', version: '3.6.1'
+     
     // mail
-    compile group: 'com.sun.mail', name: 'javax.mail', version: '1.6.1'
-    compile group: 'com.sun.mail', name: 'smtp', version: '1.6.1'
+    compile group: 'com.sun.mail', name: 'javax.mail', version: '1.6.2'
+    compile group: 'com.sun.mail', name: 'smtp', version: '1.6.2'
     // https://mvnrepository.com/artifact/com.github.spullara.mustache.java/compiler
     compile group: 'com.github.spullara.mustache.java', name: 'compiler', version: '0.9.5'
 
-    compile group: 'org.apache.logging.log4j', name: 'log4j-api', version: '2.11.0'
-    compile group: 'org.apache.logging.log4j', name: 'log4j-core', version: '2.11.0'
+    compile group: 'org.apache.logging.log4j', name: 'log4j-api', version: '2.11.1'
+    compile group: 'org.apache.logging.log4j', name: 'log4j-core', version: '2.11.1'
    
     testCompile "junit:junit:4.12"
     // https://mvnrepository.com/artifact/org.mockito/mockito-core
-    testCompile group: 'org.mockito', name: 'mockito-core', version: '2.18.3'
+    testCompile group: 'org.mockito', name: 'mockito-core', version: '2.22.0'
 }
 
 task srcZip(type: Zip) {
@@ -237,11 +240,6 @@ task forceTest( ) {
    
    // version of build
 
-task increaseBuildNumber() << {
-   updateTransientVersionProperties()
-   println "increased build number ..."
-}
-   
 gradle.taskGraph.whenReady { TaskExecutionGraph graph ->
    if (graph.hasTask(":release")) {
       if (!version.isRelease) {
@@ -256,33 +254,6 @@ gradle.taskGraph.whenReady { TaskExecutionGraph graph ->
    }
 }
    
-void updateTransientVersionProperties() {
-   Date d = new Date()
-   ant.propertyfile(file: versionProperties){
-      entry(key: 'build.date', type: 'date', operation: '=', value: d, pattern: dayFormat)
-   }
-   ant.propertyfile(file: versionProperties){
-      entry(key: 'build.time', type: 'date', operation: '=', value: d, pattern: timeFormat)
-   }
-   version.buildNumber++
-   ant.propertyfile(file: versionProperties){
-      entry(key: 'build.number', type: 'int', operation: '=', value: version.buildNumber)
-   }
-
-   ant.propertyfile(file: versionProperties){
-      entry(key: 'product.version', type: 'string', operation: '=', value: version)
-   }
-}
-   
-task printVersion(group: 'versioning', description: 'Prints versioning info as persisted in the version.properties file') << {
-   println "Major Version: $version.major"
-   println "Minor Version: $version.minor"
-   println "Patch Version: $version.patch"
-   println "Build Number: $version.buildNumber"
-   println "Build Day: $version.buildDay"
-   println "Build Time: $version.buildTime"
-}
-
 task incrementMajorVersion(group: 'versioning', description: 'Increments the product.version.major number stored in the version.properties file') << {
    ant.propertyfile(file: versionProperties){
       entry(key: 'product.version.major', type: 'int', operation: '+', value: 1)
@@ -302,12 +273,35 @@ task incrementPatchVersion(group: 'versioning', description: 'Increments the pro
 }
 
 task incrementBuildNumber(group: 'versioning', description: 'Increments the build.number number stored in the version.properties file') << {
+   updateTransientVersionProperties()
+}
+
+void updateTransientVersionProperties() {
+   Date d = new Date()
    ant.propertyfile(file: versionProperties){
-      entry(key: 'build.number', type: 'int', operation: '+', value: 1)
+      entry(key: 'build.date', type: 'date', operation: '=', value: d, pattern: dayFormat)
+   }
+   ant.propertyfile(file: versionProperties){
+      entry(key: 'build.time', type: 'date', operation: '=', value: d, pattern: timeFormat)
+   }
+   version.buildNumber++
+   ant.propertyfile(file: versionProperties){
+      entry(key: 'build.number', type: 'int', operation: '=', value: version.buildNumber)
+   }
+
+   ant.propertyfile(file: versionProperties){
+      entry(key: 'product.version', type: 'string', operation: '=', value: version)
    }
 }
 
-task release(group: 'versioning', description: 'A marker task that triggers updating of the build.isRelease property in the version.properties file to true', dependsOn: 'distZip') {
+task release(group: 'versioning', description: 'A marker task that triggers updating of the build.isRelease property in the version.properties file to true', dependsOn: 'distZip') << {
+   updateBuildRelease(true)
+}
+
+void updateBuildRelease(Boolean value) {
+   ant.propertyfile(file: versionProperties){
+      entry(key: 'build.isRelease', operation: '=', value: value)
+   }
 }
 
 task createWrapper(type: Wrapper) {
@@ -360,8 +354,11 @@ VersionInfo readVersionInfo(propertiesFile) {
          props.'build.isRelease'.toBoolean())
 }
 
-void updateBuildRelease(Boolean value) {
-   ant.propertyfile(file: versionProperties){
-      entry(key: 'build.isRelease', operation: '=', value: value)
-   }
+task printVersion(group: 'versioning', description: 'Prints versioning info as persisted in the version.properties file') << {
+   println "Major Version: $version.major"
+   println "Minor Version: $version.minor"
+   println "Patch Version: $version.patch"
+   println "Build Number: $version.buildNumber"
+   println "Build Day: $version.buildDay"
+   println "Build Time: $version.buildTime"
 }
