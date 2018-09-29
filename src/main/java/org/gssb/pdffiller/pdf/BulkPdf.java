@@ -199,6 +199,7 @@ public class BulkPdf {
          String msg = "Error while creating file '" +
                       targetPdf.getAbsolutePath() + "'.";
          logger.error(msg, e);
+         throw new UnrecoverableException(msg, e);
       }
       
       return targetPdf;

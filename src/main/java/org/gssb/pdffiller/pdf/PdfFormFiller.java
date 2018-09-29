@@ -2,8 +2,9 @@ package org.gssb.pdffiller.pdf;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.List;
 import java.util.Map;
-import java.util.Set;
+import java.util.Map.Entry;
 import java.util.stream.Collectors;
 
 import org.apache.logging.log4j.LogManager;
@@ -45,16 +46,11 @@ public class PdfFormFiller {
       pdf.protect(spp);
    }
    
-   private void setField(final PDAcroForm acroForm, final String fieldName,
-                         final String value) throws IOException {
-      PDField field = acroForm.getField( fieldName );
-      if (field != null ) {
-          field.setValue(value);
-         // set the field to read only after inserting content
-//         field.setReadOnly(true);
-      } else {
-          assert(0==1) : "No field found with name:" + fieldName;
-      }
+   private void setField(final PDField field, final String value) 
+                throws IOException {
+      assert(field != null);
+      field.setValue(value);
+//    field.setReadOnly(true);
    }
    
    public boolean isPdfForm(final File pdfFile) 
@@ -63,16 +59,15 @@ public class PdfFormFiller {
       try (PDDocument pdf = PDDocument.load(pdfFile)){
          PDDocumentCatalog docCatalog = pdf.getDocumentCatalog();
          PDAcroForm acroForm = docCatalog.getAcroForm();
-         isPDFForm = acroForm!=null; 
+         isPDFForm = acroForm!=null;
       } catch (IOException e) {
          if (e.getMessage().contains(NOT_PDF_ERROR)) {
-            // not and PDF document
+            // not a PDF document
             isPDFForm = false;
          } else {
             throw e;
          }
       }
-      
       return isPDFForm;
    }
    
@@ -86,22 +81,34 @@ public class PdfFormFiller {
       PDAcroForm acroForm = docCatalog.getAcroForm();
       
       if (acroForm!=null) {
-         Set<String> fieldNames =
+         // log form field names
+         String fieldNames =
                acroForm.getFields()
                        .stream()
                        .map(f -> f.getFullyQualifiedName())
-                       .collect(Collectors.toSet());
+                       .collect(Collectors.joining(", "));
+         logger.debug(fieldNames);
+         
          acroForm.setNeedAppearances(false);
+         // group fields by name
+         Map<String, List<PDField>> pdfFields =
+               acroForm.getFields()
+                       .stream()
+                       .collect(Collectors.groupingBy(PDField::getFullyQualifiedName));
          
          // iterate over all pdf fields
-         for (String acroFieldName : fieldNames) {
+         for (Entry<String, List<PDField>> pdfField : pdfFields.entrySet()) {
+            assert(pdfField.getValue().size() >0);
+            String acroFieldName = pdfField.getKey();
             String columnName = fieldMap.getOrDefault(acroFieldName, acroFieldName);
             ExcelCell cell = excelRow.getRow().get(columnName);
-            
             if (cell==null) continue;
-            setField(acroForm, acroFieldName, cell.getColumnValue());
+            
+            // handle multiple fields with the same name
+            for (PDField field : pdfField.getValue()) {
+               setField(field, cell.getColumnValue());
+            }
          }
-         
          acroForm.flatten();
       
          if (masterKey!=null && !masterKey.isEmpty() && 
