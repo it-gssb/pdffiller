@@ -52,8 +52,9 @@ public class TemplateBuilderTest {
       
       assertEquals("pdf2", template.get().getKey());
       assertEquals("AATG Gold.pdf", template.get().getTemplateFileName());
-      assertEquals("src/test/resources/2018/sources/sources/AATG Gold.pdf",
-                   template.get().getTemplatePath().toString());
+      File expectedFile = 
+            new File ("src/test/resources/2018/sources/sources/AATG Gold.pdf");
+      assertEquals(expectedFile.getPath(), template.get().getTemplatePath().toString());
    }
    
    @Test
