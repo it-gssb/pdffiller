@@ -103,8 +103,8 @@ public class BulkPdf {
    }
    
    public BulkPdf(final AppProperties properties) {
-      this(properties, new RowReader(), new TextBuilder(), new PdfFormFiller(),
-           System.out);
+      this(properties, new RowReader(properties), new TextBuilder(),
+           new PdfFormFiller(), System.out);
    }
    
    private void printProgress(final int count, final char character) {

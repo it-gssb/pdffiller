@@ -30,6 +30,7 @@ public class AppProperties extends AbstractConfiguration {
    private final static String XLS_INPUT_FILE_NAME          = "excel.file_name";
    private final static String XLS_INPUT_FILE_NAME_DEFAULT  = "Raw_Input.xlsx";
    private final static String XLS_SHEET_NAME_KEY           = "excel.sheet_name";
+   private final static String XLS_GROUP_COLUMNS            = "excel.group_columns";
    private final static String XLS_TARGET_EMAIL_COLUMNS_KEY = "excel.target_email_columns";
    private final static String XLS_SECRET_COLUMNS_KEY       = "excel.secret_column";
    private final static String XLS_SECRET_COLUMNS_DEFAULT   = "Key";
@@ -121,6 +122,14 @@ public class AppProperties extends AbstractConfiguration {
       if (values==null || values.isEmpty()) {
          return XLS_TARGET_EMAIL_COLUMNS_DEFAULT;
       }
+      return Collections.unmodifiableList(values);
+   }
+   
+   public List<String> getGroupColumns() {
+      List<String> values = getPropertyList(XLS_GROUP_COLUMNS);
+      // by default, email columns and secret key columns are group columns if defined
+      values.addAll(getTargetEmailColumns());
+      values.add(getExcelSecretColumnName());
       return Collections.unmodifiableList(values);
    }
    

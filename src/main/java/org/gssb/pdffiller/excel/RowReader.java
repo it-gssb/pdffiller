@@ -5,6 +5,8 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -17,6 +19,7 @@ import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.ss.usermodel.WorkbookFactory;
+import org.gssb.pdffiller.config.AppProperties;
 import org.gssb.pdffiller.exception.UnrecoverableException;
 
 public class RowReader {
@@ -25,6 +28,16 @@ public class RowReader {
    
    private static final String MISSING_SHEET_ERROR = 
          "The Excel sheet %s is not defined in the Excel workbook %s.";
+   
+   private final String groupColumn;
+   
+   public RowReader(final AppProperties properties) {
+      if (!properties.getGroupColumns().isEmpty()) {
+         this.groupColumn = properties.getGroupColumns().get(0);
+      } else {
+         this.groupColumn = "__UNDEFINED__";
+      }
+   }
    
    private String getValue(final Cell cell, final FormulaEvaluator evaluator) {
       CellValue cellValue = evaluator.evaluate(cell);
@@ -72,6 +85,51 @@ public class RowReader {
       return isEmpty;
    }
 
+   private List<String> readHeader(final FormulaEvaluator evaluator, final Sheet sheet) {
+      List<String> header = new ArrayList<>();
+      Row topRow = sheet.getRow(0);
+      assert(!isRowEmpty(topRow, evaluator));
+      for (Cell cell : topRow) {
+         String cellValue = getValue(cell, evaluator);
+         header.add(cellValue);
+      }
+      return header;
+   }
+   
+   private ExcelRow createRow(final FormulaEvaluator evaluator,
+                              final Row currentRow, final List<String> header) {
+      int columnNumber = 0;
+      ExcelRow excelRow = new ExcelRow();
+      for (Cell cell : currentRow) {
+         assert(columnNumber < header.size());
+         String cellValue = getValue(cell, evaluator);
+         excelRow.addExcelCell(new ExcelCell(columnNumber, header.get(columnNumber),
+                                             cellValue));
+         columnNumber++;
+      }
+      return excelRow;
+   }
+   
+   private List<ExcelRow> readDataRows(final FormulaEvaluator evaluator, 
+                                       final Sheet sheet, final List<String> header) {
+      List<ExcelRow> excelRows = new ArrayList<>();
+      for (int i = 1; i <= sheet.getLastRowNum(); i++) {
+         Row currentRow = sheet.getRow(i);
+         // skip empty row
+         if (isRowEmpty(currentRow, evaluator)) continue;
+         
+         ExcelRow excelRow = createRow(evaluator, currentRow, header);
+         excelRows.add(excelRow);
+      }
+      return excelRows;
+   }
+   
+   private Map<String, List<ExcelRow>> groupRows(final List<ExcelRow> allRows) {
+      return allRows.stream()
+                    .collect(Collectors.groupingBy(r -> r.getValue(groupColumn)
+                                                         .getColumnValue()));
+   }
+   
    public List<ExcelRow> read(final File excelFile, final String sheetName)
                          throws IOException, EncryptedDocumentException,
                                              InvalidFormatException {
@@ -93,36 +151,13 @@ public class RowReader {
       assert (sheet.getPhysicalNumberOfRows() > 0);
 
       // read header
-      List<String> header = new ArrayList<>();
-      Row topRow = sheet.getRow(0);
-      assert(!isRowEmpty(topRow, evaluator));
-      for (Cell cell : topRow) {
-         String cellValue = getValue(cell, evaluator);
-         header.add(cellValue);
-      }
-
+      List<String> header = readHeader(evaluator, sheet);
       // read data rows
-      List<ExcelRow> excelRows = new ArrayList<>();
-      for (int i = 1; i <= sheet.getLastRowNum(); i++) {
-         Row currentRow = sheet.getRow(i);
-         // skip empty row
-         if (isRowEmpty(currentRow, evaluator)) continue;
-         
-         int columnNumber = 0;
-         ExcelRow excelRow = new ExcelRow();
-         for (Cell cell : currentRow) {
-            assert(columnNumber < header.size());
-            String cellValue = getValue(cell, evaluator);
-            excelRow.addExcelCell(new ExcelCell(columnNumber, header.get(columnNumber),
-                                                cellValue));
-            columnNumber++;
-         }
-         excelRows.add(excelRow);
-      }
-
+      List<ExcelRow> excelRows = readDataRows(evaluator, sheet, header);
       // Closing the workbook
       workbook.close();
       
       return Collections.unmodifiableList(excelRows);
    }
+   
 }
