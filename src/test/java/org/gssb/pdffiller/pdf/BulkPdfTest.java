@@ -13,11 +13,9 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.apache.poi.EncryptedDocumentException;
@@ -25,7 +23,6 @@ import org.apache.poi.openxml4j.exceptions.InvalidFormatException;
 import org.gssb.pdffiller.config.AppProperties;
 import org.gssb.pdffiller.excel.ExcelCell;
 import org.gssb.pdffiller.excel.ExcelRow;
-import org.gssb.pdffiller.excel.RowGroup;
 import org.gssb.pdffiller.excel.ExcelReader;
 import org.gssb.pdffiller.template.Choice;
 import org.gssb.pdffiller.template.Template;
@@ -130,7 +127,7 @@ public class BulkPdfTest extends PDFValidator {
       return emptyFieldMap;
    }
    
-   private List<RowGroup> getMockRows() {
+   private List<ExcelRow> getMockRows() {
       List<ExcelRow> rows = new ArrayList<>();
       List<String> rowDef1 = Arrays.asList(new String[] 
             {"Name:Sasson, Leon1", "LehrerIn:Mr. Cool", "Level:3", 
@@ -144,13 +141,7 @@ public class BulkPdfTest extends PDFValidator {
             {"Name:Sasson, Leon3", "LehrerIn:Mr. Cool", "Level:3", 
              "Schule:GSSB", "Klasse:3B", "secret:abc3", "Award:Participation"});
       rows.add(createMockRow(rowDef3));
-      
-      Set<String> groupColumns = new HashSet<>();
-      List<RowGroup> groups = new ArrayList<>();
-      for (ExcelRow row : rows) {
-         groups.add(new RowGroup(Arrays.asList(row), groupColumns));
-      }
-      return groups;
+      return rows;
    }
    
    @Before
@@ -162,6 +153,12 @@ public class BulkPdfTest extends PDFValidator {
       when(props.getGeneratedFolder()).thenReturn("generated");
       when(props.getExcelFileName()).thenReturn("Dummy.xlsx");
       when(props.getFileNameTemplate()).thenReturn(FILE_NAME_TEMPLATE);
+      
+      List<String> emailColumn = new ArrayList<>();
+      emailColumn.add("PrimaryParentEmail");
+      when(props.getGroupColumns()).thenReturn(emailColumn);
+      when(props.getTargetEmailColumns()).thenReturn(emailColumn);
+      when(props.getExcelSecretColumnName()).thenReturn("Key");
       
       this.rowReader = mock(ExcelReader.class);
       this.textBuilder = new TextBuilder();

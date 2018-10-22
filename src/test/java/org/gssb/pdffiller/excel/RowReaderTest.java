@@ -33,7 +33,7 @@ public class RowReaderTest {
    public void testReadSample() {
       AppProperties props = createMockProperties();
       ExcelReader reader = new ExcelReader(props);
-      List<RowGroup> excelRows = null;
+      List<ExcelRow> excelRows = null;
       try {
          excelRows = reader.read(new File(EXCEL_FILE), SHEET_NAME);
       } catch (EncryptedDocumentException e) {

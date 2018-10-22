@@ -5,6 +5,8 @@ import java.io.IOException;
 import java.io.PrintStream;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -81,7 +83,7 @@ public class BulkPdf {
    private final String generatedFolder;
    private final String excelInputFile;
    
-   private final Set<String> groupColumns;
+   private final List<String> groupColumns;
    
    private final ExcelReader rowReader;
    private final PdfFormFiller pdfFormFiller;
@@ -97,7 +99,7 @@ public class BulkPdf {
       this.generatedFolder = properties.getGeneratedFolder();
       this.excelInputFile = properties.getExcelFileName();
       
-      this.groupColumns = new HashSet<>(properties.getGroupColumns());
+      this.groupColumns = properties.getGroupColumns();
       
       this.rowReader = rowReader;
       this.textBuilder = textBuilder;
@@ -121,11 +123,36 @@ public class BulkPdf {
       }
    }
    
+   private List<RowGroup> groupRows(final List<ExcelRow> allRows) {
+      if (allRows.isEmpty()) {
+         return Collections.emptyList();
+      }
+      
+      String groupColumn = this.groupColumns.get(0);
+      // grouping column not found -> process row by row
+      if (allRows.get(0).getValue(groupColumn) == null) {
+         return allRows.stream()
+                       .map(r -> new RowGroup(Arrays.asList(r), Collections.emptySet()))
+                       .collect(Collectors.toList());
+      }
+      
+      Set<String> groupColumnSet = new HashSet<>(this.groupColumns);
+      Map<String, List<ExcelRow>> groups =
+            allRows.stream()
+                   .collect(Collectors.groupingBy(r -> r.getValue(groupColumn)
+                                                        .getColumnValue()));
+      
+      return groups.entrySet()
+                   .stream()
+                   .map(l -> new RowGroup(l.getValue(), groupColumnSet))
+                   .collect(Collectors.toList());
+   }
+   
    protected List<RowGroup> createGroups(final File excelFile,
                                          final String sheetName) {
       List<RowGroup> groups = null;
       try {
-         groups = this.rowReader.read(excelFile, sheetName);
+         groups = groupRows(this.rowReader.read(excelFile, sheetName));
       } catch (EncryptedDocumentException e) {
          String msg = "PDF Template is encrypted.";
          logger.error(msg, e);
@@ -290,7 +317,8 @@ public class BulkPdf {
                                         final Map<String, String> formFieldMap) {
       List<File> files = new ArrayList<>();
       if (useOneRecordPerForm(templatePath)) {
-         files.add(createFilledFile(rootPath, group.createFormMap(this.groupColumns),
+         files.add(createFilledFile(rootPath,
+                                    group.createFormMap(new HashSet<>(this.groupColumns)),
                                     masterKey, secretColumnName, templatePath,
                                     baseFileName, formFieldMap));
       } else {

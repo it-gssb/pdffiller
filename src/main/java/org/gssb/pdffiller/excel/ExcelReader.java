@@ -4,11 +4,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.stream.Collectors;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -31,10 +27,7 @@ public class ExcelReader {
    private static final String MISSING_SHEET_ERROR = 
          "The Excel sheet %s is not defined in the Excel workbook %s.";
    
-   private final List<String> groupColumns;
-   
    public ExcelReader(final AppProperties properties) {
-      this.groupColumns = properties.getGroupColumns();
    }
    
    private String getValue(final Cell cell, final FormulaEvaluator evaluator) {
@@ -122,21 +115,7 @@ public class ExcelReader {
       return excelRows;
    }
    
-   private List<RowGroup> groupRows(final List<ExcelRow> allRows) {
-      String groupColumn = this.groupColumns.get(0);
-      Set<String> groupColumnSet = new HashSet<>(this.groupColumns);
-      Map<String, List<ExcelRow>> groups =
-            allRows.stream()
-                   .collect(Collectors.groupingBy(r -> r.getValue(groupColumn)
-                                                        .getColumnValue()));
-      
-      return groups.entrySet()
-                   .stream()
-                   .map(l -> new RowGroup(l.getValue(), groupColumnSet))
-                   .collect(Collectors.toList());
-   }
-   
-   public List<RowGroup> read(final File excelFile, final String sheetName)
+   public List<ExcelRow> read(final File excelFile, final String sheetName)
                          throws IOException, EncryptedDocumentException,
                                              InvalidFormatException {
 
@@ -163,7 +142,7 @@ public class ExcelReader {
       // Closing the workbook
       workbook.close();
       
-      return Collections.unmodifiableList(groupRows(excelRows));
+      return Collections.unmodifiableList(excelRows);
    }
    
 }
