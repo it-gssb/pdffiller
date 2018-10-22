@@ -7,8 +7,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.function.Predicate;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import org.apache.logging.log4j.LogManager;
@@ -33,11 +31,6 @@ public class PdfFormFiller {
    
    private static final int    KEY_STRENGTH = 128;
    
-   private static final String INDEXED_FIELD_REGEX = "(\\w+)(_\\d+){0,1}";
-   
-   private final Pattern indexFieldPattern = Pattern.compile(INDEXED_FIELD_REGEX, 
-                                                             Pattern.CASE_INSENSITIVE);
-
    public void encrypt(final PDDocument pdf, final String masterKey,
                        final String key) throws IOException {
       AccessPermission ap = new AccessPermission();
@@ -116,11 +109,20 @@ public class PdfFormFiller {
       logger.debug(fieldNames);
    }
    
+   private boolean isNumber(final String string) {
+       try {
+         Integer.valueOf(string);
+          return true;
+      } catch (NumberFormatException e) {
+         return false;
+      }
+   }
+   
    private String getBaseName(final String name) {
       String base = name;
-      Matcher m = this.indexFieldPattern.matcher(name);
-      if (m.matches()) {
-         base = m.group(1);
+      int index = name.lastIndexOf("_");
+      if (index > 0 && isNumber(name.substring(index+1, name.length()))) {
+         base = name.substring(0, index);
       }
       return base;
    }

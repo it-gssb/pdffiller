@@ -31,7 +31,7 @@ public class RowGroup {
       Map<String, String> headerMap = getHeadRow().createHeaderFormMap(groupColumns);
       
       Map<String, String> allMaps = new HashMap<>(headerMap);
-      int index = 0;
+      int index = 1;
       for (ExcelRow row : this.detailRecords) {
          allMaps.putAll(row.createFormMap(index++, groupColumns));
       }
