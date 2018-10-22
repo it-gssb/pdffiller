@@ -6,6 +6,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
@@ -31,8 +32,8 @@ public class PdfFormFiller {
    
    private static final int    KEY_STRENGTH = 128;
    
-   public void encrypt(final PDDocument pdf, final String masterKey,
-                       final String key) throws IOException {
+   private void encrypt(final PDDocument pdf, final String masterKey,
+                        final String key) throws IOException {
       AccessPermission ap = new AccessPermission();
 
       // Disable form filling everything else is allowed
@@ -57,6 +58,27 @@ public class PdfFormFiller {
       return acroForm.getFields()
                      .stream()
                      .collect(Collectors.groupingBy(PDField::getFullyQualifiedName));
+   }
+   
+   public Set<String> getFields(final File pdfFile) 
+                      throws IOException, InvalidPasswordException {
+      Set<String> result;
+      try (PDDocument pdf = PDDocument.load(pdfFile)) {
+         PDDocumentCatalog docCatalog = pdf.getDocumentCatalog();
+         PDAcroForm acroForm = docCatalog.getAcroForm();
+         result = acroForm.getFields()
+                          .stream()
+                          .map(f -> f.getFullyQualifiedName())
+                          .collect(Collectors.toSet());         
+      } catch (IOException e) {
+         if (e.getMessage().contains(NOT_PDF_ERROR)) {
+            // not a PDF document
+            result = Collections.emptySet();
+         } else {
+            throw e;
+         }
+      }
+      return result;
    }
    
    private boolean condition(final File pdfFile,

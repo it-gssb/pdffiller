@@ -286,6 +286,16 @@ public class BulkPdf {
                     .collect(Collectors.toList());
    }
    
+   private boolean containsOnlyGroupFields(final Path templatePath) {
+      Set<String> fields;
+      try {
+         fields = this.pdfFormFiller.getFields(templatePath.toFile());
+      } catch (IOException e) {
+         return false;
+      }
+      return this.groupColumns.containsAll(fields);
+   }
+   
    private boolean isPdfForm(final Path templatePath) {
       try {
          return this.pdfFormFiller.isPdfForm(templatePath.toFile());
@@ -338,7 +348,8 @@ public class BulkPdf {
          files.add(createFilledFile(rootPath, group.getHeadRow().getRowMap(),
                                     masterKey, secretColumnName, templatePath,
                                     baseFileName, formFieldMap, false));
-      } else if (useOneRecordPerForm(templatePath)) {
+      } else if (useOneRecordPerForm(templatePath) ||
+                 containsOnlyGroupFields(templatePath)) {
          files.add(createFilledFile(rootPath,
                                     group.createFormMap(new HashSet<>(this.groupColumns)),
                                     masterKey, secretColumnName, templatePath,
