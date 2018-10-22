@@ -118,15 +118,21 @@ public class PdfFormFiller {
       }
    }
    
+   private boolean endsOnIndex(final String name) {
+      int index = name.lastIndexOf("_");
+      return index > 0 && isNumber(name.substring(index+1, name.length()));
+   }
+   
    private String getBaseName(final String name) {
       String base = name;
-      int index = name.lastIndexOf("_");
-      if (index > 0 && isNumber(name.substring(index+1, name.length()))) {
+      if (endsOnIndex(name)) {
+         int index = name.lastIndexOf("_");
          base = name.substring(0, index);
       }
       return base;
    }
    
+   // TODO error - repeated form triggers condition
    private boolean containsRepeatedFieldNames(final PDAcroForm acroForm) {
       return !acroForm.getFields()
                       .stream()
@@ -135,6 +141,7 @@ public class PdfFormFiller {
                       .values()
                       .stream()
                       .filter(l -> l.size()>1)
+                      .peek(l -> System.err.println(l.size()))
                       .findFirst()
                       .orElse(Collections.emptyList())
                       .isEmpty();

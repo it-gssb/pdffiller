@@ -57,6 +57,8 @@ public class AppProperties extends AbstractConfiguration {
    
    private final static String FILE_NAME_TEMPLATE           = "file.name_template";
    
+   private final static String FILE_GROUP_NAME_TEMPLATE     = "file.group_name_template";
+   
    private final static String TEMPLATE                     = "template";
    
    private final static String CHOICE                       = "choice";
@@ -222,6 +224,10 @@ public class AppProperties extends AbstractConfiguration {
    
    public String getFileNameTemplate() {
       return getMandatoryProperty(FILE_NAME_TEMPLATE);
+   }
+   
+   public String getFileGroupNameTemplate() {
+      return getMandatoryProperty(FILE_GROUP_NAME_TEMPLATE);
    }
    
    //

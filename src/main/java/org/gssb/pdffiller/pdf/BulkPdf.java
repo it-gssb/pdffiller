@@ -90,6 +90,7 @@ public class BulkPdf {
    private final TextBuilder textBuilder;
    
    private final String fileNameTemplate;
+   private final String fileGroupNameTemplate;
    
    BulkPdf(final AppProperties properties, final ExcelReader rowReader,
            final TextBuilder textBuilder, final PdfFormFiller pdfFormFiller,
@@ -106,6 +107,7 @@ public class BulkPdf {
       this.pdfFormFiller = pdfFormFiller;
       
       this.fileNameTemplate = properties.getFileNameTemplate();
+      this.fileGroupNameTemplate = properties.getFileGroupNameTemplate();
       
       this.outstream = outstream;
    }
@@ -172,10 +174,13 @@ public class BulkPdf {
    // TODO: externalize expression for name
    protected String getTargetFileName(final Map<String, String> formMap, 
                                       final Path templatePath,
-                                      final Map<String, String> nameValuePairs) {
+                                      final Map<String, String> nameValuePairs,
+                                      final boolean isGroup) {
       String name;
+      String templateString = isGroup ? this.fileGroupNameTemplate
+                                      : this.fileNameTemplate; 
       try {
-         name = textBuilder.substitute(this.fileNameTemplate, nameValuePairs);
+         name = textBuilder.substitute(templateString, nameValuePairs);
       } catch (IOException e) {
 
          String msg = String.format(CREATE_NAME_ERROR, this.fileNameTemplate);
@@ -194,13 +199,15 @@ public class BulkPdf {
    protected File getTargetPdf(final String rootPath,
                                final Map<String, String> formMap,
                                final Path templatePath,
-                               final String baseFileName) {
+                               final String baseFileName,
+                               final boolean isGroup) {
 	   // define additional key-value pair for file base name
 	   Map<String, String> nameValuePairs = new HashMap<>(formMap);
 	   nameValuePairs.put(BASE_NAME, baseFileName);
       String targetPath = rootPath + File.separator + 
                           this.generatedFolder + File.separator +
-                          getTargetFileName(formMap, templatePath, nameValuePairs);
+                          getTargetFileName(formMap, templatePath, 
+                                            nameValuePairs, isGroup);
       return new File(targetPath);
    }
 
@@ -210,12 +217,14 @@ public class BulkPdf {
                                  final String secretColumnName,
                                  final Path templatePath, 
                                  final String baseFileName,
-                                 final Map<String, String> formFieldMap) {
+                                 final Map<String, String> formFieldMap,
+                                 final boolean isGroup) {
       // uses by default reference to PDF file if it does not contain a form
       File targetPdf = templatePath.toFile();
       try {
          if (this.pdfFormFiller.isPdfForm(templatePath.toFile())) {
-            targetPdf = getTargetPdf(rootPath, formMap, templatePath, baseFileName);
+            targetPdf = getTargetPdf(rootPath, formMap, templatePath,
+                                     baseFileName, isGroup);
             String secret = formMap.get(secretColumnName);
             this.pdfFormFiller
                 .populateAndCopy(templatePath.toFile(), targetPdf, formMap,
@@ -309,7 +318,8 @@ public class BulkPdf {
                                        target.getTemplate().getTemplatePath(),
                                        target.getBaseFileName(),
                                        formFieldMaps.get(target.getTemplate()
-                                                               .getKey())));
+                                                               .getKey()),
+                                       false));
          }
       }
       
@@ -327,17 +337,17 @@ public class BulkPdf {
       if (!isPdfForm(templatePath)) {
          files.add(createFilledFile(rootPath, group.getHeadRow().getRowMap(),
                                     masterKey, secretColumnName, templatePath,
-                                    baseFileName, formFieldMap));
+                                    baseFileName, formFieldMap, false));
       } else if (useOneRecordPerForm(templatePath)) {
          files.add(createFilledFile(rootPath,
                                     group.createFormMap(new HashSet<>(this.groupColumns)),
                                     masterKey, secretColumnName, templatePath,
-                                    baseFileName, formFieldMap));
+                                    baseFileName, formFieldMap, true));
       } else {
          for (ExcelRow row : group.getRows()) {
             files.add(createFilledFile(rootPath, row.createRowMap(), masterKey,
                                        secretColumnName, templatePath, baseFileName,
-                                       formFieldMap));
+                                       formFieldMap, false));
          }
       }
       return files;
