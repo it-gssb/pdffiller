@@ -276,6 +276,14 @@ public class BulkPdf {
                                                 : Stream.empty())
                     .collect(Collectors.toList());
    }
+   
+   private boolean isPdfForm(final Path templatePath) {
+      try {
+         return this.pdfFormFiller.isPdfForm(templatePath.toFile());
+      } catch (IOException e) {
+         return false;
+      }
+   }
 
    private boolean useOneRecordPerForm(final Path templatePath) {
       try {
@@ -316,7 +324,11 @@ public class BulkPdf {
                                         final String baseFileName,
                                         final Map<String, String> formFieldMap) {
       List<File> files = new ArrayList<>();
-      if (useOneRecordPerForm(templatePath)) {
+      if (!isPdfForm(templatePath)) {
+         files.add(createFilledFile(rootPath, group.getHeadRow().getRowMap(),
+                                    masterKey, secretColumnName, templatePath,
+                                    baseFileName, formFieldMap));
+      } else if (useOneRecordPerForm(templatePath)) {
          files.add(createFilledFile(rootPath,
                                     group.createFormMap(new HashSet<>(this.groupColumns)),
                                     masterKey, secretColumnName, templatePath,
