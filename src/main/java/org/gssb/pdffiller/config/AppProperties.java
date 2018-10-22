@@ -1,6 +1,7 @@
 package org.gssb.pdffiller.config;
 
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -126,7 +127,7 @@ public class AppProperties extends AbstractConfiguration {
    }
    
    public List<String> getGroupColumns() {
-      List<String> values = getPropertyList(XLS_GROUP_COLUMNS);
+      List<String> values = new ArrayList<>(getPropertyList(XLS_GROUP_COLUMNS));
       // by default, email columns and secret key columns are group columns if defined
       values.addAll(getTargetEmailColumns());
       values.add(getExcelSecretColumnName());
