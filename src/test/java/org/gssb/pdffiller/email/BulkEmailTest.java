@@ -13,7 +13,9 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import javax.mail.Address;
 import javax.mail.BodyPart;
@@ -29,6 +31,7 @@ import javax.mail.Transport;
 import org.gssb.pdffiller.config.AppProperties;
 import org.gssb.pdffiller.excel.ExcelCell;
 import org.gssb.pdffiller.excel.ExcelRow;
+import org.gssb.pdffiller.excel.RowGroup;
 import org.gssb.pdffiller.exception.UnrecoverableException;
 import org.gssb.pdffiller.pdf.UnitOfWork;
 import org.junit.Before;
@@ -77,8 +80,10 @@ public class BulkEmailTest {
       when(props.getEmailTimeout()).thenReturn(100);
       if (oneRecipient) {
          when(props.getTargetEmailColumns()).thenReturn(Arrays.asList("email1"));
+         when(props.getGroupColumns()).thenReturn(Arrays.asList("email1"));
       } else {
          when(props.getTargetEmailColumns()).thenReturn(Arrays.asList("email1", "email2"));
+         when(props.getGroupColumns()).thenReturn(Arrays.asList("email1", "email2"));
       }
       when(props.getEmailSubjectMessage()).thenReturn("German Saturday School Boston for {{Name}}");
       when(props.getSourceFolder()).thenReturn("sources");
@@ -123,6 +128,14 @@ public class BulkEmailTest {
          excelRow.addExcelCell(cell);
       }
       return excelRow;
+   }
+   
+   private RowGroup createRowGroup(final String[] columns,
+                                   final List<String> columnNames) {
+      List<ExcelRow> rows = new ArrayList<>();
+      rows.add(createExcelRow(columns));
+      Set<String> columnSet = new HashSet<>(columnNames);
+      return new RowGroup(rows, columnSet);
    }
    
    private String getTextFromMimeMultipart(final MimeMultipart mimeMultipart)
@@ -196,11 +209,18 @@ public class BulkEmailTest {
       
       File attachment1 = new File(TEMPLATE1);
       
+      RowGroup rowGroup;
+      if (oneRecipient) {
+         rowGroup = createRowGroup(rowDesc, Arrays.asList("email1"));
+      } else {
+         rowGroup = createRowGroup(rowDesc, Arrays.asList("email1", "email2"));
+      }
+      
       List<UnitOfWork> work = new ArrayList<>();
       for (int i=0; i< emailCount; i++) {
          UnitOfWork uow = mock(UnitOfWork.class);
          when(uow.getGeneratedFiles()).thenReturn(Arrays.asList(attachment1));
-         when(uow.getRow()).thenReturn(createExcelRow(rowDesc));
+         when(uow.getRow()).thenReturn(rowGroup);
          work.add(uow);
       }
       

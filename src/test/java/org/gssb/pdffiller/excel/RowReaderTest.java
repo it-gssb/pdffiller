@@ -11,8 +11,7 @@ import java.util.List;
 import org.apache.poi.EncryptedDocumentException;
 import org.apache.poi.openxml4j.exceptions.InvalidFormatException;
 import org.gssb.pdffiller.config.AppProperties;
-import org.gssb.pdffiller.excel.ExcelRow;
-import org.gssb.pdffiller.excel.RowReader;
+import org.gssb.pdffiller.excel.ExcelReader;
 import org.junit.Test;
 
 public class RowReaderTest {
@@ -33,8 +32,8 @@ public class RowReaderTest {
    @Test
    public void testReadSample() {
       AppProperties props = createMockProperties();
-      RowReader reader = new RowReader(props);
-      List<ExcelRow> excelRows = null;
+      ExcelReader reader = new ExcelReader(props);
+      List<RowGroup> excelRows = null;
       try {
          excelRows = reader.read(new File(EXCEL_FILE), SHEET_NAME);
       } catch (EncryptedDocumentException e) {

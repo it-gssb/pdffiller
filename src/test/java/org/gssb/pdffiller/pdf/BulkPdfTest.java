@@ -13,9 +13,11 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.apache.poi.EncryptedDocumentException;
@@ -23,7 +25,8 @@ import org.apache.poi.openxml4j.exceptions.InvalidFormatException;
 import org.gssb.pdffiller.config.AppProperties;
 import org.gssb.pdffiller.excel.ExcelCell;
 import org.gssb.pdffiller.excel.ExcelRow;
-import org.gssb.pdffiller.excel.RowReader;
+import org.gssb.pdffiller.excel.RowGroup;
+import org.gssb.pdffiller.excel.ExcelReader;
 import org.gssb.pdffiller.template.Choice;
 import org.gssb.pdffiller.template.Template;
 import org.gssb.pdffiller.template.TemplateHelper;
@@ -46,7 +49,7 @@ public class BulkPdfTest extends PDFValidator {
    private final static String FILE_NAME_TEMPLATE = "{{_BaseName_}} - {{Name}}.pdf";
    
    private PrintStream printStream;
-   private RowReader rowReader= null;
+   private ExcelReader rowReader= null;
    private TextBuilder textBuilder = null;
    private BulkPdf bulkPdf;
 
@@ -127,7 +130,7 @@ public class BulkPdfTest extends PDFValidator {
       return emptyFieldMap;
    }
    
-   private List<ExcelRow> getMockRows() {
+   private List<RowGroup> getMockRows() {
       List<ExcelRow> rows = new ArrayList<>();
       List<String> rowDef1 = Arrays.asList(new String[] 
             {"Name:Sasson, Leon1", "LehrerIn:Mr. Cool", "Level:3", 
@@ -141,7 +144,13 @@ public class BulkPdfTest extends PDFValidator {
             {"Name:Sasson, Leon3", "LehrerIn:Mr. Cool", "Level:3", 
              "Schule:GSSB", "Klasse:3B", "secret:abc3", "Award:Participation"});
       rows.add(createMockRow(rowDef3));
-      return rows;
+      
+      Set<String> groupColumns = new HashSet<>();
+      List<RowGroup> groups = new ArrayList<>();
+      for (ExcelRow row : rows) {
+         groups.add(new RowGroup(Arrays.asList(row), groupColumns));
+      }
+      return groups;
    }
    
    @Before
@@ -154,7 +163,7 @@ public class BulkPdfTest extends PDFValidator {
       when(props.getExcelFileName()).thenReturn("Dummy.xlsx");
       when(props.getFileNameTemplate()).thenReturn(FILE_NAME_TEMPLATE);
       
-      this.rowReader = mock(RowReader.class);
+      this.rowReader = mock(ExcelReader.class);
       this.textBuilder = new TextBuilder();
       PdfFormFiller pdfFormFiller = new PdfFormFiller();
       this.bulkPdf = new BulkPdf(props, this.rowReader, this.textBuilder,
@@ -170,8 +179,7 @@ public class BulkPdfTest extends PDFValidator {
    @Test
    public void testThreeRow() throws EncryptedDocumentException,
                                      InvalidFormatException, IOException {
-      when(this.rowReader.read(new File(ROOT + "/sources/Dummy.xlsx"),
-                               "Dummy"))
+      when(this.rowReader.read(new File(ROOT + "/sources/Dummy.xlsx"), "Dummy"))
           .thenReturn(getMockRows());
       
       Template template =

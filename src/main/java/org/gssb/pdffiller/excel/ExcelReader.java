@@ -4,8 +4,10 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.apache.logging.log4j.LogManager;
@@ -22,21 +24,17 @@ import org.apache.poi.ss.usermodel.WorkbookFactory;
 import org.gssb.pdffiller.config.AppProperties;
 import org.gssb.pdffiller.exception.UnrecoverableException;
 
-public class RowReader {
+public class ExcelReader {
    
-   private final static Logger logger = LogManager.getLogger(RowReader.class);
+   private final static Logger logger = LogManager.getLogger(ExcelReader.class);
    
    private static final String MISSING_SHEET_ERROR = 
          "The Excel sheet %s is not defined in the Excel workbook %s.";
    
-   private final String groupColumn;
+   private final List<String> groupColumns;
    
-   public RowReader(final AppProperties properties) {
-      if (!properties.getGroupColumns().isEmpty()) {
-         this.groupColumn = properties.getGroupColumns().get(0);
-      } else {
-         this.groupColumn = "__UNDEFINED__";
-      }
+   public ExcelReader(final AppProperties properties) {
+      this.groupColumns = properties.getGroupColumns();
    }
    
    private String getValue(final Cell cell, final FormulaEvaluator evaluator) {
@@ -124,13 +122,21 @@ public class RowReader {
       return excelRows;
    }
    
-   private Map<String, List<ExcelRow>> groupRows(final List<ExcelRow> allRows) {
-      return allRows.stream()
-                    .collect(Collectors.groupingBy(r -> r.getValue(groupColumn)
-                                                         .getColumnValue()));
+   private List<RowGroup> groupRows(final List<ExcelRow> allRows) {
+      String groupColumn = this.groupColumns.get(0);
+      Set<String> groupColumnSet = new HashSet<>(this.groupColumns);
+      Map<String, List<ExcelRow>> groups =
+            allRows.stream()
+                   .collect(Collectors.groupingBy(r -> r.getValue(groupColumn)
+                                                        .getColumnValue()));
+      
+      return groups.entrySet()
+                   .stream()
+                   .map(l -> new RowGroup(l.getValue(), groupColumnSet))
+                   .collect(Collectors.toList());
    }
    
-   public List<ExcelRow> read(final File excelFile, final String sheetName)
+   public List<RowGroup> read(final File excelFile, final String sheetName)
                          throws IOException, EncryptedDocumentException,
                                              InvalidFormatException {
 
@@ -157,7 +163,7 @@ public class RowReader {
       // Closing the workbook
       workbook.close();
       
-      return Collections.unmodifiableList(excelRows);
+      return Collections.unmodifiableList(groupRows(excelRows));
    }
    
 }

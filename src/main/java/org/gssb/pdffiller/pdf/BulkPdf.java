@@ -6,10 +6,12 @@ import java.io.PrintStream;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -20,9 +22,9 @@ import org.apache.poi.EncryptedDocumentException;
 import org.apache.poi.openxml4j.exceptions.InvalidFormatException;
 import org.gssb.pdffiller.config.AppProperties;
 import org.gssb.pdffiller.excel.ColumnNotFoundException;
-import org.gssb.pdffiller.excel.ExcelCell;
 import org.gssb.pdffiller.excel.ExcelRow;
-import org.gssb.pdffiller.excel.RowReader;
+import org.gssb.pdffiller.excel.RowGroup;
+import org.gssb.pdffiller.excel.ExcelReader;
 import org.gssb.pdffiller.exception.UnrecoverableException;
 import org.gssb.pdffiller.template.Choice;
 import org.gssb.pdffiller.template.Template;
@@ -79,19 +81,23 @@ public class BulkPdf {
    private final String generatedFolder;
    private final String excelInputFile;
    
-   private final RowReader rowReader;
+   private final Set<String> groupColumns;
+   
+   private final ExcelReader rowReader;
    private final PdfFormFiller pdfFormFiller;
    private final TextBuilder textBuilder;
    
    private final String fileNameTemplate;
    
-   BulkPdf(final AppProperties properties, final RowReader rowReader,
+   BulkPdf(final AppProperties properties, final ExcelReader rowReader,
            final TextBuilder textBuilder, final PdfFormFiller pdfFormFiller,
            final PrintStream outstream) {
       super();
       this.sourceFolder = properties.getSourceFolder();
       this.generatedFolder = properties.getGeneratedFolder();
       this.excelInputFile = properties.getExcelFileName();
+      
+      this.groupColumns = new HashSet<>(properties.getGroupColumns());
       
       this.rowReader = rowReader;
       this.textBuilder = textBuilder;
@@ -103,7 +109,7 @@ public class BulkPdf {
    }
    
    public BulkPdf(final AppProperties properties) {
-      this(properties, new RowReader(properties), new TextBuilder(),
+      this(properties, new ExcelReader(properties), new TextBuilder(),
            new PdfFormFiller(), System.out);
    }
    
@@ -115,11 +121,11 @@ public class BulkPdf {
       }
    }
    
-   protected List<ExcelRow> createRows(final File excelFile,
-                                       final String sheetName) {
-      List<ExcelRow> rows = null;
+   protected List<RowGroup> createGroups(final File excelFile,
+                                         final String sheetName) {
+      List<RowGroup> groups = null;
       try {
-         rows = this.rowReader.read(excelFile, sheetName);
+         groups = this.rowReader.read(excelFile, sheetName);
       } catch (EncryptedDocumentException e) {
          String msg = "PDF Template is encrypted.";
          logger.error(msg, e);
@@ -133,11 +139,11 @@ public class BulkPdf {
          logger.error(msg, e);
          throw new UnrecoverableException(msg, e);
       }
-      return rows;
+      return groups;
    }
    
    // TODO: externalize expression for name
-   protected String getTargetFileName(final ExcelRow row, 
+   protected String getTargetFileName(final Map<String, String> formMap, 
                                       final Path templatePath,
                                       final Map<String, String> nameValuePairs) {
       String name;
@@ -158,19 +164,21 @@ public class BulkPdf {
       return name;
    }
 
-   protected File getTargetPdf(final String rootPath, final ExcelRow row,
+   protected File getTargetPdf(final String rootPath,
+                               final Map<String, String> formMap,
                                final Path templatePath,
                                final String baseFileName) {
-	   // define additional 
-	   Map<String, String> nameValuePairs = new HashMap<>(row.getRowMap());
+	   // define additional key-value pair for file base name
+	   Map<String, String> nameValuePairs = new HashMap<>(formMap);
 	   nameValuePairs.put(BASE_NAME, baseFileName);
       String targetPath = rootPath + File.separator + 
                           this.generatedFolder + File.separator +
-                          getTargetFileName(row, templatePath, nameValuePairs);
+                          getTargetFileName(formMap, templatePath, nameValuePairs);
       return new File(targetPath);
    }
-   
-   private File createFilledFile(final String rootPath, final ExcelRow row,
+
+   private File createFilledFile(final String rootPath,
+                                 final Map<String, String> formMap,
                                  final String masterKey,
                                  final String secretColumnName,
                                  final Path templatePath, 
@@ -180,11 +188,10 @@ public class BulkPdf {
       File targetPdf = templatePath.toFile();
       try {
          if (this.pdfFormFiller.isPdfForm(templatePath.toFile())) {
-            targetPdf = getTargetPdf(rootPath, row, templatePath, baseFileName);
-            ExcelCell cell = row.getValue(secretColumnName);
-            String secret = cell!= null ? cell.getColumnValue() : null;
+            targetPdf = getTargetPdf(rootPath, formMap, templatePath, baseFileName);
+            String secret = formMap.get(secretColumnName);
             this.pdfFormFiller
-                .populateAndCopy(templatePath.toFile(), targetPdf, row,
+                .populateAndCopy(templatePath.toFile(), targetPdf, formMap,
                                  masterKey, formFieldMap, secret);
          } else {
             logger.debug("Include plain PDF document " + 
@@ -242,25 +249,81 @@ public class BulkPdf {
                                                 : Stream.empty())
                     .collect(Collectors.toList());
    }
+
+   private boolean useOneRecordPerForm(final Path templatePath) {
+      try {
+         return this.pdfFormFiller
+                    .containsRepeatedFieldNames(templatePath.toFile());
+      } catch (IOException e) {
+         return false;
+      }
+   }
    
-   private List<File> createPdfFiles(final String rootPath, final ExcelRow row,
-                                    final String masterKey,
-                                    final String secretColumnName,
-                                    final List<Template> alwaysInclude,
-                                    final List<Choice> choices,
-                                    final Map<String, Map<String, String>> formFieldMaps) {
-      List<File> createdFiles =
-            Stream.concat(alwaysInclude.stream()
-                                       .map(a -> new Target(a, Optional.empty())), 
-                          findMatchingTemplates(row, choices).stream())
-                  .map(t -> createFilledFile(rootPath, row, 
-                                             masterKey, secretColumnName, 
-                                             t.getTemplate().getTemplatePath(),
-                                             t.getBaseFileName(),
-                                             formFieldMaps.get(t.getTemplate()
-                                                                .getKey())))
-                  .collect(Collectors.toList());
+   private List<File> createFilledFiles(final String rootPath,
+                                        final RowGroup group,
+                                        final String masterKey,
+                                        final String secretColumnName,
+                                        final List<Choice> choices,
+                                        final Map<String, Map<String, String>> formFieldMaps) {
+      List<File> files = new ArrayList<>();
+      for (ExcelRow row : group.getRows()) {
+         List<Target> targets = findMatchingTemplates(row, choices);
+         for (Target target : targets) {
+            files.add(createFilledFile(rootPath, row.createRowMap(), masterKey,
+                                       secretColumnName,
+                                       target.getTemplate().getTemplatePath(),
+                                       target.getBaseFileName(),
+                                       formFieldMaps.get(target.getTemplate()
+                                                               .getKey())));
+         }
+      }
       
+      return files;
+   }
+   
+   private List<File> createFilledFiles(final String rootPath,
+                                        final RowGroup group,
+                                        final String masterKey,
+                                        final String secretColumnName,
+                                        final Path templatePath, 
+                                        final String baseFileName,
+                                        final Map<String, String> formFieldMap) {
+      List<File> files = new ArrayList<>();
+      if (useOneRecordPerForm(templatePath)) {
+         files.add(createFilledFile(rootPath, group.createFormMap(this.groupColumns),
+                                    masterKey, secretColumnName, templatePath,
+                                    baseFileName, formFieldMap));
+      } else {
+         for (ExcelRow row : group.getRows()) {
+            files.add(createFilledFile(rootPath, row.createRowMap(), masterKey,
+                                       secretColumnName, templatePath, baseFileName,
+                                       formFieldMap));
+         }
+      }
+      return files;
+   }
+   
+   private List<File> createPdfFiles(final String rootPath, final RowGroup group,
+                                     final String masterKey,
+                                     final String secretColumnName,
+                                     final List<Template> alwaysInclude,
+                                     final List<Choice> choices,
+                                     final Map<String, Map<String, String>> formFieldMaps) {
+      List<File> createdFiles =
+            alwaysInclude.stream()
+                         .map(a -> new Target(a, Optional.empty()))
+                         .flatMap(t -> createFilledFiles(rootPath, group, 
+                                                         masterKey, secretColumnName, 
+                                                         t.getTemplate()
+                                                          .getTemplatePath(),
+                                                         t.getBaseFileName(),
+                                                         formFieldMaps.get(t.getTemplate()
+                                                                            .getKey()))
+                                                       .stream())
+                         .collect(Collectors.toList());
+      
+      createdFiles.addAll(createFilledFiles(rootPath, group, masterKey, secretColumnName,
+                                            choices, formFieldMaps));
       return createdFiles;
    }
 
@@ -273,33 +336,32 @@ public class BulkPdf {
                                       final Map<String, Map<String, String>> formFieldMaps) {
       String excelPath = rootPath + File.separator + this.sourceFolder +
                          File.separator + this.excelInputFile;
-      List<ExcelRow> rows = createRows(new File(excelPath), sheetName);
+      List<RowGroup> groups = createGroups(new File(excelPath), sheetName);
       
-      if (masterKey!=null && !masterKey.isEmpty() && !rows.isEmpty() && 
-          !secretColumnName.isEmpty() && 
-          rows.get(0).getValue(secretColumnName)==null) {
-         String msg = String.format(SECRET_COLUMN_DOES_NOT_EXISTS, 
-                                    secretColumnName);
-         logger.error(msg);
-         throw new UnrecoverableException(msg);
+      if (masterKey!=null && !masterKey.isEmpty() && !secretColumnName.isEmpty() &&
+          !groups.isEmpty() && groups.get(0).getHeadRow().getValue(secretColumnName)==null) {
+            String msg = String.format(SECRET_COLUMN_DOES_NOT_EXISTS, 
+                                       secretColumnName);
+            logger.error(msg);
+            throw new UnrecoverableException(msg);
       }
       
       this.outstream.println();
       int processed = 0;
       int count = 0;
       List<UnitOfWork> resultSets = new ArrayList<>();
-      for (ExcelRow row : rows) {
-         List<File> generated = createPdfFiles(rootPath, row, masterKey, 
+      for (RowGroup group : groups) {
+         List<File> generated = createPdfFiles(rootPath, group, masterKey, 
                                                secretColumnName, alwaysInclude,
                                                choices, formFieldMaps);
-         resultSets.add(new UnitOfWork(row, generated));
+         resultSets.add(new UnitOfWork(group, generated));
          
          processed++;
          count+=generated.size();
          printProgress(processed, '.');
       }
       this.outstream.println();
-      this.outstream.println("Created " + count + " files for " + rows.size() +
+      this.outstream.println("Created " + count + " files for " + groups.size() +
                              " input rows.");
       
       return resultSets;

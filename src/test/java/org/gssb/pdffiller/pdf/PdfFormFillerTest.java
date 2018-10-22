@@ -50,7 +50,7 @@ public class PdfFormFillerTest extends PDFValidator {
       }
       
       try {
-         filler.populateAndCopy(pdfTemplate, targetFile, row, masterKey, 
+         filler.populateAndCopy(pdfTemplate, targetFile, row.getRowMap(), masterKey, 
                                 Collections.emptyMap(), secret);
       } catch (InvalidPasswordException e) {
          e.printStackTrace();

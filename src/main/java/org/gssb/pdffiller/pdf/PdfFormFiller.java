@@ -2,9 +2,13 @@ package org.gssb.pdffiller.pdf;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.function.Predicate;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import org.apache.logging.log4j.LogManager;
@@ -16,8 +20,6 @@ import org.apache.pdfbox.pdmodel.encryption.InvalidPasswordException;
 import org.apache.pdfbox.pdmodel.encryption.StandardProtectionPolicy;
 import org.apache.pdfbox.pdmodel.interactive.form.PDAcroForm;
 import org.apache.pdfbox.pdmodel.interactive.form.PDField;
-import org.gssb.pdffiller.excel.ExcelCell;
-import org.gssb.pdffiller.excel.ExcelRow;
 
 public class PdfFormFiller {
    
@@ -30,6 +32,11 @@ public class PdfFormFiller {
          "The file '%s' does not contain a PDF form and will be copied as is.";
    
    private static final int    KEY_STRENGTH = 128;
+   
+   private static final String INDEXED_FIELD_REGEX = "(\\w+)(_\\d+){0,1}";
+   
+   private final Pattern indexFieldPattern = Pattern.compile(INDEXED_FIELD_REGEX, 
+                                                             Pattern.CASE_INSENSITIVE);
 
    public void encrypt(final PDDocument pdf, final String masterKey,
                        final String key) throws IOException {
@@ -52,27 +59,96 @@ public class PdfFormFiller {
       field.setValue(value);
 //    field.setReadOnly(true);
    }
+
+   private Map<String, List<PDField>> getPdfFieldMap(final PDAcroForm acroForm) {
+      return acroForm.getFields()
+                     .stream()
+                     .collect(Collectors.groupingBy(PDField::getFullyQualifiedName));
+   }
    
-   public boolean isPdfForm(final File pdfFile) 
-                  throws IOException, InvalidPasswordException{
-      boolean isPDFForm;
-      try (PDDocument pdf = PDDocument.load(pdfFile)){
+   private boolean condition(final File pdfFile,
+                             final Predicate<PDAcroForm> formPredicate) 
+                   throws IOException, InvalidPasswordException{
+      boolean result;
+      try (PDDocument pdf = PDDocument.load(pdfFile)) {
          PDDocumentCatalog docCatalog = pdf.getDocumentCatalog();
          PDAcroForm acroForm = docCatalog.getAcroForm();
-         isPDFForm = acroForm!=null;
+         result = formPredicate.test(acroForm);
       } catch (IOException e) {
          if (e.getMessage().contains(NOT_PDF_ERROR)) {
             // not a PDF document
-            isPDFForm = false;
+            result = false;
          } else {
             throw e;
          }
       }
-      return isPDFForm;
+      return result;
    }
    
-   public void populateAndCopy(final File templatePdf, final File targetPdf,
-                               final ExcelRow excelRow, final String masterKey,
+   public boolean isPdfForm(final File pdfFile) 
+                  throws IOException, InvalidPasswordException{
+      return condition(pdfFile, a -> a!=null);
+   }
+
+   private void fillFormFields(final Map<String, String> formMap,
+                               final Map<String, String> fieldMap,
+                               final Map<String, List<PDField>> pdfFields)
+                throws IOException {
+      for (Entry<String, List<PDField>> pdfField : pdfFields.entrySet()) {
+         assert(pdfField.getValue().size() >0);
+         String acroFieldName = pdfField.getKey();
+         String columnName = fieldMap.getOrDefault(acroFieldName, acroFieldName);
+         String value = formMap.get(columnName);
+         if (value==null) continue;
+         
+         // handle multiple fields with the same name
+         for (PDField field : pdfField.getValue()) {
+            setField(field, value);
+         }
+      }
+   }
+   
+   private void logFormFields(PDAcroForm acroForm) {
+      String fieldNames = acroForm.getFields()
+                                  .stream()
+                                  .map(f -> f.getFullyQualifiedName())
+                                  .collect(Collectors.joining(", "));
+      logger.debug(fieldNames);
+   }
+   
+   private String getBaseName(final String name) {
+      String base = name;
+      Matcher m = this.indexFieldPattern.matcher(name);
+      if (m.matches()) {
+         base = m.group(1);
+      }
+      return base;
+   }
+   
+   private boolean containsRepeatedFieldNames(final PDAcroForm acroForm) {
+      return !acroForm.getFields()
+                      .stream()
+                      .map(f -> f.getFullyQualifiedName())
+                      .collect(Collectors.groupingBy(s -> getBaseName(s)))
+                      .values()
+                      .stream()
+                      .filter(l -> l.size()>1)
+                      .findFirst()
+                      .orElse(Collections.emptyList())
+                      .isEmpty();
+   }
+   
+   public boolean containsRepeatedFieldNames(final File pdfFile)
+                  throws IOException, InvalidPasswordException {
+      return condition(pdfFile,
+                       a -> (a != null) && containsRepeatedFieldNames(a));
+   }
+      
+
+   public void populateAndCopy(final File templatePdf,
+                               final File targetPdf,
+                               final Map<String, String> formMap,
+                               final String masterKey,
                                final Map<String, String> fieldMap,
                                final String secret) 
                throws IOException, InvalidPasswordException {
@@ -81,34 +157,10 @@ public class PdfFormFiller {
       PDAcroForm acroForm = docCatalog.getAcroForm();
       
       if (acroForm!=null) {
-         // log form field names
-         String fieldNames =
-               acroForm.getFields()
-                       .stream()
-                       .map(f -> f.getFullyQualifiedName())
-                       .collect(Collectors.joining(", "));
-         logger.debug(fieldNames);
+         logFormFields(acroForm);
          
          acroForm.setNeedAppearances(false);
-         // group fields by name
-         Map<String, List<PDField>> pdfFields =
-               acroForm.getFields()
-                       .stream()
-                       .collect(Collectors.groupingBy(PDField::getFullyQualifiedName));
-         
-         // iterate over all pdf fields
-         for (Entry<String, List<PDField>> pdfField : pdfFields.entrySet()) {
-            assert(pdfField.getValue().size() >0);
-            String acroFieldName = pdfField.getKey();
-            String columnName = fieldMap.getOrDefault(acroFieldName, acroFieldName);
-            ExcelCell cell = excelRow.getRow().get(columnName);
-            if (cell==null) continue;
-            
-            // handle multiple fields with the same name
-            for (PDField field : pdfField.getValue()) {
-               setField(field, cell.getColumnValue());
-            }
-         }
+         fillFormFields(formMap, fieldMap, getPdfFieldMap(acroForm));
          acroForm.flatten();
       
          if (masterKey!=null && !masterKey.isEmpty() && 
@@ -122,5 +174,5 @@ public class PdfFormFiller {
       pdf.save(targetPdf);
       pdf.close();
    }
-   
+
 }

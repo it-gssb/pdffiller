@@ -33,7 +33,7 @@ import javax.mail.internet.MimeMultipart;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.gssb.pdffiller.config.AppProperties;
-import org.gssb.pdffiller.excel.ExcelRow;
+import org.gssb.pdffiller.excel.RowGroup;
 import org.gssb.pdffiller.exception.UnrecoverableException;
 import org.gssb.pdffiller.pdf.UnitOfWork;
 import org.gssb.pdffiller.text.TextBuilder;
@@ -444,10 +444,10 @@ public class BulkEmail {
       return sb.toString();
    }
    
-   private List<String> getValidEmailAddresses(final ExcelRow row) {
+   private List<String> getValidEmailAddresses(final RowGroup group) {
       String missing = this.emailColumns
                            .stream()
-                           .filter(c -> row.getRow().get(c)==null)
+                           .filter(c -> group.getHeadRow().getRow().get(c)==null)
                            .collect(Collectors.joining(", "));
       if (!missing.isEmpty()) {
          String msg = String.format(MISSING_COLUMN, missing);
@@ -456,16 +456,16 @@ public class BulkEmail {
       
       return this.emailColumns
                  .stream()
-                 .map(c -> row.getValue(c.trim()).getColumnValue())
+                 .map(c -> group.getHeadRow().getValue(c.trim()).getColumnValue())
                  .filter(v -> v!=null && v.contains("@"))
                  .collect(Collectors.toList());
    }
 
    private String createSubjectMessage(final TextBuilder textBuilder, 
-                                       final ExcelRow row,
+                                       final RowGroup group,
                                        final String recipients) {
       try {
-         return textBuilder.substitute(subjectTemplate, row.getRowMap());
+         return textBuilder.substitute(subjectTemplate, group.getHeadRow().getRowMap());
       } catch (IOException e) {
          String msg = String.format(CREATE_SUBJECT_ERROR, recipients);
          logger.error(msg, e);
@@ -480,10 +480,10 @@ public class BulkEmail {
    
    private String createEmailBodyMessage(final TextBuilder textBuilder,
                                          final String bodyTemplateText,
-                                         final ExcelRow row,
+                                         final RowGroup row,
                                          final String recipients) {
       try {
-         return textBuilder.substitute(bodyTemplateText, row.getRowMap());
+         return textBuilder.substitute(bodyTemplateText, row.getHeadRow().getRowMap());
       } catch (IOException e) {
          String msg = String.format(CREATE_BODY_ERROR, recipients);
          logger.error(msg, e);
@@ -511,13 +511,13 @@ public class BulkEmail {
       
       this.outstream.println();
       for (UnitOfWork unit : createdUnits) {
-         ExcelRow row = unit.getRow();
+         RowGroup group = unit.getRow();
          List<File> attachedFiles = unit.getGeneratedFiles();
          
-         List<String> emails = getValidEmailAddresses(row);
+         List<String> emails = getValidEmailAddresses(group);
          if (emails.isEmpty()) {
             logger.warn("No email sent for '" +
-                        row.getValue("Name").getColumnValue() + 
+                        group.getHeadRow().getValue("Name").getColumnValue() + 
                         "' because the required email address was unavailable.");
             continue;
          }
@@ -536,9 +536,9 @@ public class BulkEmail {
             continue;
          }
          
-         String subject = createSubjectMessage(textBuilder, row, recipients);
+         String subject = createSubjectMessage(textBuilder, group, recipients);
          String message = createEmailBodyMessage(textBuilder, bodyTemplateText,
-                                                 row, recipients);
+                                                 group, recipients);
          Optional<Message> msg;
          try {
             msg = createMessage(session, userName, fromAddress, emails,
