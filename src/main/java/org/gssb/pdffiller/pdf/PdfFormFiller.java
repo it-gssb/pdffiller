@@ -154,16 +154,15 @@ public class PdfFormFiller {
       return base;
    }
    
-   // TODO error - repeated form triggers condition
    private boolean containsRepeatedFieldNames(final PDAcroForm acroForm) {
       return !acroForm.getFields()
                       .stream()
                       .map(f -> f.getFullyQualifiedName())
+                      .filter(f -> endsOnIndex(f))
                       .collect(Collectors.groupingBy(s -> getBaseName(s)))
                       .values()
                       .stream()
                       .filter(l -> l.size()>1)
-                      .peek(l -> System.err.println(l.size()))
                       .findFirst()
                       .orElse(Collections.emptyList())
                       .isEmpty();
