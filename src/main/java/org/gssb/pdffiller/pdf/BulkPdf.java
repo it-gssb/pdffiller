@@ -293,10 +293,7 @@ public class BulkPdf {
       } catch (IOException e) {
          return false;
       }
-      // TODO remove default or dummy fields from template
-      List<String> gColumns = new ArrayList<>(this.groupColumns);
-      gColumns.add("default");
-      return gColumns.containsAll(fields);
+      return this.groupColumns.containsAll(fields);
    }
    
    private boolean isPdfForm(final Path templatePath) {
