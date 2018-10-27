@@ -29,7 +29,7 @@ public class PdfFormFillerTest extends PDFValidator {
    @Test
    public void testCreatePdf() {
       String originalPdf = "src/test/resources/2018/sources/AATG Raw Score.pdf";
-      String targetPdf   = "src/test/resources/2018/generated/Leon Test.pdf";
+      String targetPdf   = "src/test/resources/2018/generated/Leo Test.pdf";
       String masterKey   = "MASTER";
       String secret      = "abc";
       
@@ -38,7 +38,7 @@ public class PdfFormFillerTest extends PDFValidator {
                                        "Points_out_of_100", "Listening_and_Viewing",
                                        "Reading", "Percentile"});
       List<String> values = 
-            Arrays.asList(new String[]{"6B", "Sasson, Leon", "Mr. Cool", "02",
+            Arrays.asList(new String[]{"6B", "Sasson, Leo", "Mr. Cool", "02",
                                        "43", "21", "22", "N/A"});
 
       PdfFormFiller filler = new PdfFormFiller();
@@ -64,7 +64,7 @@ public class PdfFormFillerTest extends PDFValidator {
       
       try {
          List<String> expected = Arrays.asList(new String[] 
-               {"Sasson, Leon", "6B", "Mr. Cool", 
+               {"Sasson, Leo", "6B", "Mr. Cool", 
                 "02", "21", "22", "43", "N/A"});
          validatePDFDocument(targetFile, secret, expected);
       } catch (IOException e) {

@@ -130,14 +130,15 @@ public class BulkPdf {
          return Collections.emptyList();
       }
       
-      String groupColumn = this.groupColumns.get(0);
       // grouping column not found -> process row by row
-      if (allRows.get(0).getValue(groupColumn) == null) {
+      if (this.groupColumns==null || this.groupColumns.isEmpty() ||
+          allRows.get(0).getValue(this.groupColumns.get(0)) == null) {
          return allRows.stream()
                        .map(r -> new RowGroup(Arrays.asList(r), Collections.emptySet()))
                        .collect(Collectors.toList());
       }
       
+      String groupColumn = this.groupColumns.get(0);
       Set<String> groupColumnSet = new HashSet<>(this.groupColumns);
       Map<String, List<ExcelRow>> groups =
             allRows.stream()

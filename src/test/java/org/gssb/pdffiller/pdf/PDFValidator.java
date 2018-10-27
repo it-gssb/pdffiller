@@ -43,6 +43,7 @@ public class PDFValidator {
       
       expected.forEach(
             s -> assertTrue("expected '" + s + "'", parsedText.contains(s)));
+      pdf.close();
    }
 
 }

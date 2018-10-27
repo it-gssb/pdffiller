@@ -30,6 +30,7 @@ import org.gssb.pdffiller.template.TemplateHelper;
 import org.gssb.pdffiller.text.TextBuilder;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
 
 import static org.mockito.Mockito.*;
@@ -40,22 +41,27 @@ public class BulkPdfTest extends PDFValidator {
    private final static String TEMPLATE1 = ROOT + "/sources/AATG Raw Score.pdf";
    private final static String TEMPLATE2 = ROOT + "/sources/AATG Gold.pdf";
    private final static String TEMPLATE3 = ROOT + "/sources/AATG Participation.pdf";
+   private final static String TEMPLATE4 = ROOT + "/sources/2018-2019 Acceptance.pdf";
    private final static String GENERATED_DIR = ROOT + "/generated";
    
    private final static String MASTER_KEY =  "MASTER";
+   private final static String EMAIL_ADDRESS = "PrimaryParentEmail";
    private final static String FILE_NAME_TEMPLATE = "{{_BaseName_}} - {{Name}}.pdf";
+   private final static String FILE_GROUP_NAME_TEMPLATE = 
+                                    "{{_BaseName_}} - {{" + EMAIL_ADDRESS + "}}.pdf";
    
    private PrintStream printStream;
    private ExcelReader rowReader= null;
    private TextBuilder textBuilder = null;
+   private List<String> groupColumns = null;
    private BulkPdf bulkPdf;
 
-   private void deleteGeneratedFiles(final File generatedDir) {
+   private static void deleteGeneratedFiles(final File generatedDir) {
       assertTrue(generatedDir.isDirectory());
       List<String> bulkGenerated = 
             Arrays.asList(generatedDir.list())
                   .stream()
-                  .filter(n -> n.substring(0,n.length()-5).endsWith("Leon"))
+                  .filter(n -> n.startsWith("AATG ") || n.contains("Acceptance"))
                   .collect(Collectors.toList());
       try {
          bulkGenerated.forEach(n -> new File(generatedDir, n).delete());
@@ -124,24 +130,38 @@ public class BulkPdfTest extends PDFValidator {
              "Text8 : Schule"});
       Map<String, String> pdf3FieldMap = createMap(pdf3KeyValues);
       emptyFieldMap.put("pdf3", pdf3FieldMap);
+      
+      emptyFieldMap.put("pdf4", Collections.emptyMap());
       return emptyFieldMap;
    }
    
-   private List<ExcelRow> getMockRows() {
+   private List<ExcelRow> getMockRows(final boolean includeEmail) {
+      String email = EMAIL_ADDRESS + ":mary.and.michael@somedomain.org";
+
       List<ExcelRow> rows = new ArrayList<>();
-      List<String> rowDef1 = Arrays.asList(new String[] 
-            {"Name:Sasson, Leon1", "LehrerIn:Mr. Cool", "Level:3", 
-             "Schule:GSSB", "Klasse:1B", "secret:abc1", "Award:Goldurkunde"});
+      List<String> rowDef1 = new ArrayList<>(Arrays.asList(new String[] 
+            {"Name:S, Leo", "LehrerIn:Mr. Cool1", "Level:4", "Room:123",
+             "Schule:GSSB", "Klasse:1B", "secret:abc1", "Award:Goldurkunde",
+             "FamilyID:S1234", "ParentName:Mary & Michael S"}));
+      if (includeEmail) rowDef1.add(email);
       rows.add(createMockRow(rowDef1));
-      List<String> rowDef2 = Arrays.asList(new String[] 
-            {"Name:Sasson, Leon2", "LehrerIn:Mr. Cool", "Level:3", 
-             "Schule:GSSB", "Klasse:2B", "secret:abc2", "Award:Goldurkunde"});
+      List<String> rowDef2 = new ArrayList<>(Arrays.asList(new String[] 
+            {"Name:S, Gwen", "LehrerIn:Mr. Cool2", "Level:5", "Room:223",
+             "Schule:GSSB", "Klasse:2B", "secret:abc2", "Award:Goldurkunde",
+             "FamilyID:S1234", "ParentName:Mary & Michael S"}));
+      if (includeEmail) rowDef2.add(email);
       rows.add(createMockRow(rowDef2));
-      List<String> rowDef3 = Arrays.asList(new String[] 
-            {"Name:Sasson, Leon3", "LehrerIn:Mr. Cool", "Level:3", 
-             "Schule:GSSB", "Klasse:3B", "secret:abc3", "Award:Participation"});
+      List<String> rowDef3 = new ArrayList<>(Arrays.asList(new String[] 
+            {"Name:S, Helene", "LehrerIn:Mr. Cool3", "Level:6", "Room:323",
+             "Schule:GSSB", "Klasse:3B", "secret:abc3", "Award:Participation",
+             "FamilyID:S1234", "ParentName:Mary & Michael S"}));
+      if (includeEmail) rowDef3.add(email);
       rows.add(createMockRow(rowDef3));
       return rows;
+   }
+   @BeforeClass
+   public static void clean() {
+      deleteGeneratedFiles(new File(GENERATED_DIR));
    }
    
    @Before
@@ -153,11 +173,14 @@ public class BulkPdfTest extends PDFValidator {
       when(props.getGeneratedFolder()).thenReturn("generated");
       when(props.getExcelFileName()).thenReturn("Dummy.xlsx");
       when(props.getFileNameTemplate()).thenReturn(FILE_NAME_TEMPLATE);
+      when(props.getFileGroupNameTemplate()).thenReturn(FILE_GROUP_NAME_TEMPLATE);
+
       
       List<String> emailColumn = new ArrayList<>();
-      emailColumn.add("PrimaryParentEmail");
-      when(props.getGroupColumns()).thenReturn(emailColumn);
+      emailColumn.add(EMAIL_ADDRESS);
       when(props.getTargetEmailColumns()).thenReturn(emailColumn);
+      this.groupColumns = new ArrayList<>();
+      when(props.getGroupColumns()).thenReturn(this.groupColumns);
       when(props.getExcelSecretColumnName()).thenReturn("Key");
       
       this.rowReader = mock(ExcelReader.class);
@@ -165,7 +188,6 @@ public class BulkPdfTest extends PDFValidator {
       PdfFormFiller pdfFormFiller = new PdfFormFiller();
       this.bulkPdf = new BulkPdf(props, this.rowReader, this.textBuilder,
                                  pdfFormFiller, this.printStream);
-      deleteGeneratedFiles(new File(GENERATED_DIR));
    }
 
    @After
@@ -177,7 +199,7 @@ public class BulkPdfTest extends PDFValidator {
    public void testThreeRow() throws EncryptedDocumentException,
                                      InvalidFormatException, IOException {
       when(this.rowReader.read(new File(ROOT + "/sources/Dummy.xlsx"), "Dummy"))
-          .thenReturn(getMockRows());
+          .thenReturn(getMockRows(false));
       
       Template template =
             TemplateHelper.createTemplate("pdf1", Paths.get(TEMPLATE1));
@@ -193,27 +215,65 @@ public class BulkPdfTest extends PDFValidator {
                                  alwaysInclude, choices, fieldMaps);
       assertEquals(3, uows.size());
       
-      int i=1;
+      int i=0;
+      List<String> names = Arrays.asList("Leo", "Gwen", "Helene");
       for (UnitOfWork uow : uows) {
          List<String> expected0 = Arrays.asList(new String[] 
-               {"Sasson, Leon" + i, "Mr. Cool", "3", i+"B", "TESTERGEBNIS"});
-         String reward = i>2 ? "Participation" : "Goldurkunde";
+               {names.get(i), "Mr. Cool" + (i+1), (4+i)+"", (i+1)+"B", "TESTERGEBNIS"});
+         String reward = i>1 ? "Participation" : "Goldurkunde";
          List<String> expected1 = Arrays.asList(new String[] 
-               {"Sasson, Leon" + i, "Mr. Cool", "3", "GSSB", reward});
+               {names.get(i), "Mr. Cool" + (i+1), (4+i)+"", "GSSB", reward});
          
          assertEquals(2, uow.getGeneratedFiles().size());
          
          File validate0 = uow.getGeneratedFiles().get(0);
          assertTrue(validate0.getName().startsWith("AATG Raw Score"));
-         assertTrue(validate0.getName().endsWith("Sasson, Leon"+i+".pdf"));
-         validatePDFDocument(validate0, "abc"+i, expected0);
+         assertTrue(validate0.getName().endsWith("S, " + names.get(i)+".pdf"));
+         validatePDFDocument(validate0, "abc"+(i+1), expected0);
          
          File validate1 = uow.getGeneratedFiles().get(1);
          assertTrue(validate1.getName().startsWith("AATG Cert"));
-         assertTrue(validate1.getName().endsWith("Sasson, Leon"+i+".pdf"));
-         validatePDFDocument(validate1, "abc"+i, expected1);
+         assertTrue(validate1.getName().endsWith("S, " + names.get(i)+".pdf"));
+         validatePDFDocument(validate1, "abc"+(i+1), expected1);
          i++;
       }
+   }
+      
+   @Test
+   public void testMultiRowPdf() throws EncryptedDocumentException,
+                                        InvalidFormatException, IOException {
+      this.groupColumns.add(EMAIL_ADDRESS);
+      this.groupColumns.add("FamilyID");
+      this.groupColumns.add("ParentName");
+      when(this.rowReader.read(new File(ROOT + "/sources/Dummy.xlsx"), "Dummy"))
+          .thenReturn(getMockRows(true));
+      
+      Template template = TemplateHelper.createTemplate("pdf4", Paths.get(TEMPLATE4));
+      List<Template> alwaysInclude = new ArrayList<>();
+      alwaysInclude.add(template);
+      
+      List<Choice> choices = createMockChoices("AATG Cert");
+      
+      Map<String, Map<String, String>> fieldMaps = defineFieldMaps();
+      
+      List<UnitOfWork> uows =
+         this.bulkPdf.createPdfs(ROOT, "Dummy", MASTER_KEY, "secret", 
+                                 alwaysInclude, choices, fieldMaps);
+      assertEquals(1, uows.size());
+      
+      
+      List<String> expected = new ArrayList<>(Arrays.asList(
+                               "S1234", "Mary & Michael S"));
+      List<String> names = Arrays.asList("Leo", "Gwen", "Helene");
+      for (int i=0; i<3; i++) {
+         expected.addAll(Arrays.asList("S, " + names.get(i), (i+1)+"23", 
+                                       "Mr. Cool" + (i+1))); 
+      }
+      
+      File validate = uows.get(0).getGeneratedFiles().get(0);
+      assertTrue(validate.getName().startsWith("2018-2019 Acceptance - "));
+      assertTrue(validate.getName().endsWith("mary.and.michael@somedomain.org.pdf"));
+      validatePDFDocument(validate, null, expected);
       
    }
 
