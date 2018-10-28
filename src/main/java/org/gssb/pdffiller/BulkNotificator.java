@@ -61,103 +61,44 @@ public class BulkNotificator {
 	
 	private final static String NO_ENCRYPTION = "";
 
-	private final Options options;
+	private final static Options options =  new Options();
+	
+	private final Configuration config;
+	private final AppProperties properties;
+	private final BulkPdf bulkPdf;
 
-	public BulkNotificator() {
+	public BulkNotificator(final Configuration config) {
 		super();
-		options = new Options();
-		options.addOption("h", "help", false, "Show help.");
-		options.addOption("c", "configuration", true, "Configuration file for PDF Mail Merge application.");
-		options.addOption("p", "password", true, "Email account user password.");
-		options.addOption("m", "master-key", true, "Master key for PDF encryption");
-		options.addOption("s", "suppress", false, "Logs email instead of sending them.");
+      this.config = config;
+      this.properties = createPropertiesInstance(config);
+		this.bulkPdf = createBulkPdfInstance(properties);
 	}
 	
-	//
-	// factory methods to aid validation
-	//
-	
-	protected AppProperties createConfiguration(final Configuration config) {
-      return new AppProperties(config.configFile);
-   }
+   //
+   // factory methods to aid validation
+   //
    
-   protected BulkEmail createBulkEmail(final AppProperties properties) {
+   protected BulkEmail createBulkEmailInstance(final AppProperties properties) {
       return new BulkEmail(properties);
    }
 
-   protected BulkPdf createBulkPdf(final AppProperties properties) {
+   protected BulkPdf createBulkPdfInstance(final AppProperties properties) {
       return new BulkPdf(properties);
    }
 
-   protected TemplateBuilder createTemplateBuilder(
+   protected TemplateBuilder createTemplateBuilderImpl(
                                          final Configuration config,
                                          final AppProperties properties) {
       return new TemplateBuilder(properties, config.root);
    }
    
+    protected AppProperties createPropertiesInstance(final Configuration config) {
+       return new AppProperties(config.configFile);
+    }
+   
    //
-   // Solution
+   // Implementation
    //
-	
-	private void help() {
-		HelpFormatter formater = new HelpFormatter();
-		formater.printHelp(BulkNotificator.class.getCanonicalName(), options);
-		System.exit(1);
-	}
-	
-	private String getRoot(final String pathToConfig) {
-	   Path configPath = Paths.get(pathToConfig);
-	   return configPath.getParent()
-	                    .getParent()
-	                    .toString();
-	}
-	
-	private Configuration parse(final String[] args) {
-		Configuration config = new Configuration();
-		CommandLineParser parser = new BasicParser();
-		CommandLine cmd = null;
-		try {
-			cmd = parser.parse(options, args);
-
-			if (cmd.hasOption("h"))
-				help();
-
-			if (cmd.hasOption("c")) {
-			   config.configFile = Paths.get(cmd.getOptionValue("c"));
-				config.root = getRoot(cmd.getOptionValue("c"));
-			} else {
-				logger.error("Missing configuration file option");
-				help();
-			}
-			
-         if (cmd.hasOption("m")) {
-            config.masterKey = cmd.getOptionValue("m");
-         } else {
-            config.masterKey = NO_ENCRYPTION;
-         }
-			
-			if (args.length==2 || args.length==4 && cmd.hasOption("m")) {
-				// this implies that only PDF documents are produced
-				return config;
-			}
-			
-			if (cmd.hasOption("p")) {
-				config.emailPassword = cmd.getOptionValue("p");
-			} else {
-				logger.error("Missing email account password.");
-				help();
-			}
-
-         if (cmd.hasOption("s")) {
-            config.simulate = true;
-         }
-				
-		} catch (ParseException e) {
-			logger.error("Failed to parse comand line properties", e);
-			help();
-		}
-		return config;
-	}
 	
 	private Map<String, Map<String, String>> 
 	        getFormFieldMaps(final AppProperties properties) {
@@ -194,7 +135,7 @@ public class BulkNotificator {
          throw new UnrecoverableException(msg, e);
       }
       
-      BulkEmail bulkEmail = createBulkEmail(properties);
+      BulkEmail bulkEmail = createBulkEmailInstance(properties);
       bulkEmail.sendEmails(createdUnits, config.simulate,
                            properties.getEmailHost(),
                            properties.getEmailPort(), 
@@ -204,35 +145,33 @@ public class BulkNotificator {
    }
 	
    	public void run(final String[] args) {
-	   Configuration config = parse(args);
-      AppProperties properties = createConfiguration(config);
       try {
          TemplateBuilder choiceBuilder = 
-               createTemplateBuilder(config, properties);
+               createTemplateBuilderImpl(this.config, this.properties);
          List<Template> alwaysInclude = choiceBuilder.allwaysInclude();
          List<Choice>  choices = choiceBuilder.collectChoices();
          
          // pdf key -> (acro field -> spreadsheet field)
          Map<String, Map<String, String>> formFieldMaps =
-               getFormFieldMaps(properties);
+               getFormFieldMaps(this.properties);
          
-         String secretColumnName = properties.getExcelSecretColumnName();
+         String secretColumnName = this.properties.getExcelSecretColumnName();
          
-         BulkPdf bulkPdf = createBulkPdf(properties);
          List<UnitOfWork> createdUnits;
          try {
             createdUnits = 
-               bulkPdf.createPdfs(config.root, properties.getExcelSheetName(),
-                                  config.masterKey, secretColumnName,
-                                  alwaysInclude, choices, formFieldMaps);
+               this.bulkPdf.createPdfs(this.config.root,
+                                       this.properties.getExcelSheetName(),
+                                       this.config.masterKey, secretColumnName,
+                                       alwaysInclude, choices, formFieldMaps);
          } catch (ColumnNotFoundException e) {
             String msg = String.format(INCORRECT_SECRET_COLUMN,
                                        secretColumnName);
             logger.error(msg, e);
             throw new UnrecoverableException(msg, e);
          }
-         if (!config.emailPassword.isEmpty()) {
-            deliverEmails(createdUnits, config, properties);
+         if (!this.config.emailPassword.isEmpty()) {
+            deliverEmails(createdUnits, this.config, this.properties);
          }
       } catch (UnrecoverableException e) {
          String cause = e.getCause()!=null && e.getCause().getMessage()!=null
@@ -252,7 +191,69 @@ public class BulkNotificator {
       }
       System.exit(0);
 	}
+   	
+   	//
+   	// Process command line
+   	//
 
+   private static void help() {
+      HelpFormatter formater = new HelpFormatter();
+      formater.printHelp(BulkNotificator.class.getCanonicalName(), options);
+      System.exit(1);
+   }
+
+   private static String getRoot(final String pathToConfig) {
+      Path configPath = Paths.get(pathToConfig);
+      return configPath.getParent().getParent().toString();
+   }
+      
+   protected static Configuration parse(final String[] args) {
+      Configuration config = new Configuration();
+      CommandLineParser parser = new BasicParser();
+      CommandLine cmd = null;
+      try {
+         cmd = parser.parse(options, args);
+
+         if (cmd.hasOption("h")) help();
+
+         if (cmd.hasOption("c")) {
+            config.configFile = Paths.get(cmd.getOptionValue("c"));
+            config.root = getRoot(cmd.getOptionValue("c"));
+         } else {
+            logger.error("Missing configuration file option");
+            help();
+         }
+
+         if (cmd.hasOption("m")) {
+            config.masterKey = cmd.getOptionValue("m");
+         } else {
+            config.masterKey = NO_ENCRYPTION;
+         }
+
+         if (args.length == 2 || args.length == 4 && cmd.hasOption("m")) {
+            // this implies that only PDF documents are produced
+            return config;
+         }
+
+         if (cmd.hasOption("p")) {
+            config.emailPassword = cmd.getOptionValue("p");
+         } else {
+            logger.error("Missing email account password.");
+            help();
+         }
+
+         if (cmd.hasOption("s")) {
+            config.simulate = true;
+         }
+
+      } catch (ParseException e) {
+         logger.error("Failed to parse comand line properties", e);
+         help();
+      }
+      return config;
+   }
+   	
+   	
 	/**
 	 * Configuration:
 	 * 
@@ -261,7 +262,15 @@ public class BulkNotificator {
 	 * @param args
 	 */
 	public static void main(final String[] args) {
-		BulkNotificator bn = new BulkNotificator();
+	   options.addOption("h", "help", false, "Show help.");
+      options.addOption("c", "configuration", true,
+                        "Configuration file for PDF Mail Merge application.");
+      options.addOption("p", "password", true, "Email account user password.");
+      options.addOption("m", "master-key", true, "Master key for PDF encryption");
+      options.addOption("s", "suppress", false, "Logs email instead of sending them.");
+      
+      Configuration config = parse(args);
+      		BulkNotificator bn = new BulkNotificator(config);
 		bn.run(args);
 	}
 

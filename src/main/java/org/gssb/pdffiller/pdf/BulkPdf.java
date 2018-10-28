@@ -287,14 +287,21 @@ public class BulkPdf {
                     .collect(Collectors.toList());
    }
    
-   private boolean containsOnlyGroupFields(final Path templatePath) {
+   private boolean containsOnlyGroupFields(final Path templatePath,
+                                           final Map<String, String> formFieldMap) {
       Set<String> fields;
       try {
          fields = this.pdfFormFiller.getFields(templatePath.toFile());
       } catch (IOException e) {
          return false;
       }
-      return this.groupColumns.containsAll(fields);
+      
+      // map form field names to the excel column names if specified
+      Set<String> mappedFields = 
+            fields.stream()
+                  .map(f -> formFieldMap.getOrDefault(f,f))
+                  .collect(Collectors.toSet());
+      return this.groupColumns.containsAll(mappedFields);
    }
    
    private boolean isPdfForm(final Path templatePath) {
@@ -350,7 +357,7 @@ public class BulkPdf {
                                     masterKey, secretColumnName, templatePath,
                                     baseFileName, formFieldMap, false));
       } else if (useOneRecordPerForm(templatePath) ||
-                 containsOnlyGroupFields(templatePath)) {
+                 containsOnlyGroupFields(templatePath, formFieldMap)) {
          files.add(createFilledFile(rootPath,
                                     group.createFormMap(new HashSet<>(this.groupColumns)),
                                     masterKey, secretColumnName, templatePath,

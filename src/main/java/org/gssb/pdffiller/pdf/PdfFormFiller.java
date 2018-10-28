@@ -106,13 +106,14 @@ public class PdfFormFiller {
    }
 
    private void fillFormFields(final Map<String, String> formMap,
-                               final Map<String, String> fieldMap,
+                               final Map<String, String> formFieldMap,
                                final Map<String, List<PDField>> pdfFields)
                 throws IOException {
       for (Entry<String, List<PDField>> pdfField : pdfFields.entrySet()) {
          assert(pdfField.getValue().size() >0);
          String acroFieldName = pdfField.getKey();
-         String columnName = fieldMap.getOrDefault(acroFieldName, acroFieldName);
+         String columnName = formFieldMap.getOrDefault(acroFieldName,
+                                                       acroFieldName);
          String value = formMap.get(columnName);
          if (value==null) continue;
          
@@ -179,7 +180,7 @@ public class PdfFormFiller {
                                final File targetPdf,
                                final Map<String, String> formMap,
                                final String masterKey,
-                               final Map<String, String> fieldMap,
+                               final Map<String, String> formFieldMap,
                                final String secret) 
                throws IOException, InvalidPasswordException {
       PDDocument pdf = PDDocument.load(templatePdf);
@@ -190,7 +191,7 @@ public class PdfFormFiller {
          logFormFields(acroForm);
          
          acroForm.setNeedAppearances(false);
-         fillFormFields(formMap, fieldMap, getPdfFieldMap(acroForm));
+         fillFormFields(formMap, formFieldMap, getPdfFieldMap(acroForm));
          acroForm.flatten();
       
          if (masterKey!=null && !masterKey.isEmpty() && 
