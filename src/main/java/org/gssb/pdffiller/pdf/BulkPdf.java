@@ -407,17 +407,19 @@ public class BulkPdf {
                          File.separator + this.excelInputFile;
       List<RowGroup> groups = createGroups(new File(excelPath), sheetName);
       
-      if (masterKey!=null && !masterKey.isEmpty() && !secretColumnName.isEmpty() &&
-          !groups.isEmpty() && groups.get(0).getHeadRow().getValue(secretColumnName)==null) {
-            String msg = String.format(SECRET_COLUMN_DOES_NOT_EXISTS, 
-                                       secretColumnName);
-            logger.error(msg);
-            throw new UnrecoverableException(msg);
+      if (masterKey != null && !masterKey.isEmpty() && 
+          !secretColumnName.isEmpty() && !groups.isEmpty() &&
+          groups.get(0).getHeadRow().getValue(secretColumnName) == null) {
+         String msg = String.format(SECRET_COLUMN_DOES_NOT_EXISTS,
+                                    secretColumnName);
+         logger.error(msg);
+         throw new UnrecoverableException(msg);
       }
       
       this.outstream.println();
       int processed = 0;
       int count = 0;
+      int recordCount = 0;
       List<UnitOfWork> resultSets = new ArrayList<>();
       for (RowGroup group : groups) {
          List<File> generated = createPdfFiles(rootPath, group, masterKey, 
@@ -427,11 +429,13 @@ public class BulkPdf {
          
          processed++;
          count+=generated.size();
+         recordCount+=group.getRows().size();
          printProgress(processed, '.');
       }
       this.outstream.println();
       this.outstream.println("Created " + count + " files for " + groups.size() +
-                             " input rows.");
+                             " row groups with " + recordCount +
+                             " records.");
       
       return resultSets;
    }

@@ -270,7 +270,7 @@ public class BulkNotificator {
       options.addOption("s", "suppress", false, "Logs email instead of sending them.");
       
       Configuration config = parse(args);
-      		BulkNotificator bn = new BulkNotificator(config);
+      	BulkNotificator bn = new BulkNotificator(config);
 		bn.run(args);
 	}
 
