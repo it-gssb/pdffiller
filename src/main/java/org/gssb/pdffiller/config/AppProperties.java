@@ -129,7 +129,11 @@ public class AppProperties extends AbstractConfiguration {
    }
    
    public List<String> getGroupColumns() {
-      List<String> values = new ArrayList<>(getPropertyList(XLS_GROUP_COLUMNS));
+      List<String> groupColumns = getPropertyList(XLS_GROUP_COLUMNS);
+      if (groupColumns == null || groupColumns.isEmpty()) {
+         return Collections.emptyList();
+      }
+      List<String> values = new ArrayList<>(groupColumns);
       // by default, email columns and secret key columns are group columns if defined
       values.addAll(getTargetEmailColumns());
       values.add(getExcelSecretColumnName());
