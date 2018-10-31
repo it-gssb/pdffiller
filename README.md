@@ -171,12 +171,12 @@ The PDF form must have the following structure to be able to accept multiple rec
 
 For example, a PDF form could contain a table with four rows with each row referring to a different record for students class assignment. The column names are repeated with  postfixes `_1` to `_4` to represent entries for up to four records.
 
-Student Name        | Teacher Name        | Class        | Room
-------------------- | ------------------- | ------------ | --------------
-\[Student Name\_1\] | \[Teacher Name\_1\] | \[Class\_1\] | \[Room\_1\]
-\[Student Name\_2\] | \[Teacher Name\_2\] | \[Class\_2\] | \[Room\_2\]
-\[Student Name\_3\] | \[Teacher Name\_3\] | \[Class\_3\] | \[Room\_3\]
-\[Student Name\_4\] | \[Teacher Name\_4\] | \[Class\_4\] | \[Room\_4\]
+| Student Name        | Teacher Name        | Class        | Room
+| :------------------ | :------------------ | :----------- | :-----------
+| \[Student Name\_1\] | \[Teacher Name\_1\] | \[Class\_1\] | \[Room\_1\]
+| \[Student Name\_2\] | \[Teacher Name\_2\] | \[Class\_2\] | \[Room\_2\]
+| \[Student Name\_3\] | \[Teacher Name\_3\] | \[Class\_3\] | \[Room\_3\]
+| \[Student Name\_4\] | \[Teacher Name\_4\] | \[Class\_4\] | \[Room\_4\]
 
 The group column `Parent Name` may be used anywhere in the document in the form field named 'Parent Name'.
 
