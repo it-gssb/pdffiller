@@ -71,14 +71,16 @@ Configuration Key   | Mandatory | Description
 --------------------| --------- | ---------------------------------------
 excel.file\_name | Y | Name of the Excel xslx spreadsheet in the `sources` folder that contains the records to be merged. For each record one or multiple PDF files are created according to the configuration.
 excel.sheet\_name | Y | Name of the sheet in the excel spreadsheet with the records.
-excel.secret_column | Y | Column in selected input sheet that contains the PDF encryption key.
+excel.secret\_column | Y | Column in selected input sheet that contains the PDF encryption key.
+excel.group\_columns | N | Columns that have have the same values for each group of records. The first column is used as the group criterion. 
 file.name\_template | Y | Text template using [Mustache](https://mustache.github.io/mustache.5.html) syntax to create the name of the generated file. The system variable {{\_BaseName\_}} contains the template file name without the postfix (e.g. '.pdf').
+file.group\_name\_template | N | Text template using [Mustache](https://mustache.github.io/mustache.5.html) syntax to create the name of the generated file if it contains grouped records. Only use the system variable {{\_BaseName\_}} or a reference to an Excel column referenced in the `excel.group_columns` property.
 template.\<alias\> | Y | Defines a name of a PDF form template located in the `sources` folder. The name is associated with the alias \<alias\>. Multiple PDF files may be defined, each with a different alias name \<alias\>.
 mappings.\<alias\> | N | Defines for PDF template with alias name <alias> a list of column mappings \<form field\> : \<sheet column\> that is used to map excel sheet columns to PDF form fields.
 
 The option to map PDF form columns to spreadsheet columns is useful if you need to map data to PDF forms for which you cannot define the column names.
 
-:heavy_exclamation_mark: Please note that PDF files **without** a form or a file with a non-PDF type will not be used to generate a derived PDF document. However, the original document will be included into emails. This feature is helpful for emailing unmodified documents in addition to generated ones. 
+:heavy_exclamation_mark: Please note that PDF files **without** a form or a file with a non-PDF type will not be used to generate a derived PDF document. Instead, the original document will be included into emails. This feature is helpful for emailing unmodified documents in addition to generated ones. 
 
 #### Example Configuration
 
@@ -126,7 +128,7 @@ Configuration Key          | Mandatory | Description
 -------------------------- | --------- | ---------------------------------------
 choice.\<name\>.select | Y | A list of selection criteria \<value\> : \<alias\>. \<value\> defines the expected value and \<alias\> is the PDF file alias defined in the template.\<alias\> configuration.
 choice.\<name\>.selectcolumn | N | Column in the spreadsheet that defines the value used for selecting a PDF Form template. The default value is `Template`.
-choice.\<name\>.basename | N | Is used as the value of the system variable `\_BaseName\_`. The default value is the template file name without its type postfix. 
+choice.\<name\>.basename | N | Is used as the value of the system variable `_BaseName_`. The default value is the template file name without its type postfix. 
 
 :heavy_exclamation_mark: PDF form templates are always processed if they are not referenced in any choice definition.
 
@@ -141,10 +143,51 @@ choice.certificate.select       = Goldurkunde:pdf2, Silberurkunde:pdf3, Bronzeur
 The configuration defines a choice configuration named 'certificate' that selects one of the five PDF forms pdf2 through pdf6.
 The value that the decision is based on is located in column `Award` of the sheet. For example, pdf2 (mapped to PDF form 'AATG Gold.pdf') is selected if the sheet column for the current record contains the value 'Goldurkunde'.
 
-The definition of the `basename` with value 'ATTG Certificate' in conjunction with the previously defined PDF file name expression `{{_BaseName_}} - {{Name}}.pdf` implies that all generated PDF files have a name that begind with  'ATTG Certificate - ' followed by the value in the records `name` column.
+The definition of the `basename` with value 'ATTG Certificate' in conjunction with the previously defined PDF file name expression `{{_BaseName_}} - {{Name}}.pdf` implies that all generated PDF files have a name that begins with  'ATTG Certificate - ' followed by the value in the records `name` column.
 
 PDF form pdf1 is not used in the choice configuration and therefore is always used to create a new PDF document per record.
 
+### Grouping Records and Merging Into one Document
+
+By default, PDF Filler processes the source spreadsheet row-by-row to create PDF documents and to send them to a set of email recipients. It is sometimes desirable to create documents using multiple related records and send documents created from related records in one email to the recipients.
+
+For example, it may be desirable to send documents related to multiple students of the same family in one email message to their parents. Some documents may be created once for each student and other documents may be created once per family. 
+
+One supported use case is the student enrollment notification for a family, which makes it necessary to deliver registration information once per family instead of once per student. This implies that documents related to the entire family and individual students need to be created and sent once even though each student has a separate record. Some documents related to the entire family such as the class assignment must contain data elements of all student records and of parent records. However, student test results and certificates are created for each individual student and are sent in one email to the parents.
+
+#### Enabling Grouping
+
+The PDF Filler tool allows grouping records using one Excel input column, which is the first column defined in the `excel.group\_columns` property. Records are grouped based on the values in this column and created documents are sent to the the recipients in one email. PDF Filler continues to process Excel rows row-by-row if the group column is undefined.
+
+The property `excel.group_columns` define **all Excel columns** that are the same for a group of records. Columns defined in properties `excel.secret_column` and `excel.target_email_columns` are automatically included in the non-empty column list defined by property `excel.group_columns`.
+
+#### Use Multiple Records in One Documents
+
+Some PDF form may contain fields for different records. For example, the Excel spreadsheet may contain columns `Student Name`, `Teacher Name`, `Class`, and `Room` and multiple records may be grouped by column `Parent Name`.
+
+The PDF form must have the following structure to be able to accept multiple records:
+* Form fields with a name defined as a group columns may accept the content of group columns. For example, the field name for group column `Parent Name` is the default 'Parent Name'. 
+* Form fields for fields with multiple records consist of the column name followed by a '\_' and subsequent integer numbers greater than 0. For example, the field names to represent 5 records of column `Student Name` are 'Student Name\_1' through 'Student Name\_5'. In a group of several records the value of Excel column `Student Name` for the `i`-th record is assigned to form field 'Student Name\_i'.
+
+For example, a PDF form could contain a table with four rows with each row referring to a different record for students class assignment. The column names are repeated with  postfixes `_1` to `_4` to represent entries for up to four records.
+
+   *Student Name*    |    *Teacher Name*    |   *Class*      |   *Room*
+-------------------- | -------------------- | -------------------------------
+\[Student Name\_1\]  | \[Teacher Name\_1\]  | \[Class\_1\]  |  \[Room\_1\]
+\[Student Name\_2\]  | \[Teacher Name\_2\]  | \[Class\_2\]  |  \[Room\_2\]
+\[Student Name\_3\]  | \[Teacher Name\_3\]  | \[Class\_3\]  |  \[Room\_3\]
+\[Student Name\_4\]  | \[Teacher Name\_4\]  | \[Class\_4\]  |  \[Room\_4\]
+
+The group column `Parent Name` may be used anywhere in the document as well.
+
+#### Creation Rules
+
+For each document included in the `template` definition PDF Filler determines if it is processed once per record or once per record group. The following rules are applied:
+* Documents without PDF form are attached once to the outgoing email per record group.
+* PDF forms with form fields that map to group columns `excel.group_columns` and automatically included columns are processed once per record group.
+* PDF forms with two or more form fields with naming convention `<name>_i` with `i` a number greater than 0.  
+* PDF forms that are included in a [PDF Form Choice](#advanced-pdf-mail-merge-configuration-for-pdf-form-choices) configuration are processed row-by-row.
+* All other PDF forms are processed row-by-row.
 
 ### Sending Email with PDF Document Attachments
 
