@@ -166,8 +166,8 @@ The property `excel.group_columns` define **all Excel columns** that are the sam
 Some PDF form may contain fields for different records. For example, the Excel spreadsheet may contain columns `Student Name`, `Teacher Name`, `Class`, and `Room` and multiple records may be grouped by column `Parent Name`.
 
 The PDF form must have the following structure to be able to accept multiple records:
-* Form fields with a name defined as a group columns may accept the content of group columns. For example, the field name for group column `Parent Name` is the default '\[Parent Name\]'. 
-* Form fields for fields with multiple records consist of the column name followed by a '\_' and subsequent integer numbers greater than 0. For example, the field names to represent 5 records of column `Student Name` are '\[Student Name\_1\]' through '\[Student Name\_5\]'. In a group of several records the value of Excel column `Student Name` for the `i`-th record is assigned to form field '\[Student Name\_i\]'.
+* Form fields with a name defined as a group columns may accept the content of group columns. For example, the field name for group column `Parent Name` is the default 'Parent Name'. 
+* Form fields for fields with multiple records consist of the column name followed by a '\_' and subsequent integer numbers greater than 0. For example, the field names to represent 5 records of column `Student Name` are 'Student Name\_1' through 'Student Name\_5'. In a group of several records the value of Excel column `Student Name` for the `i`-th record is assigned to form field 'Student Name\_i'.
 
 For example, a PDF form could contain a table with four rows with each row referring to a different record for students class assignment. The column names are repeated with  postfixes `_1` to `_4` to represent entries for up to four records.
 
@@ -178,7 +178,7 @@ Student Name        | Teacher Name        | Class        | Room
 \[Student Name\_3\] | \[Teacher Name\_3\] | \[Class\_3\] | \[Room\_3\]
 \[Student Name\_4\] | \[Teacher Name\_4\] | \[Class\_4\] | \[Room\_4\]
 
-The group column `Parent Name` may be used anywhere in the document in the form field named '\[Parent Name\]'.
+The group column `Parent Name` may be used anywhere in the document in the form field named 'Parent Name'.
 
 #### Creation Rules
 
