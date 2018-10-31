@@ -157,7 +157,6 @@ One supported use case is the student enrollment notification for a family, whic
 
 #### Enabling Grouping
 
-<<<<<<< HEAD
 The PDF Filler tool allows grouping records using one Excel input column, which is the first column defined in the `excel.group_columns` property. Records are grouped based on the values in this column and created documents are sent to the the recipients in one email. PDF Filler continues to process Excel rows row-by-row if the group column is undefined.
 
 The property `excel.group_columns` define **all Excel columns** that are the same for a group of records. Columns defined in properties `excel.secret_column` and `excel.target_email_columns` are automatically included in the non-empty column list defined by property `excel.group_columns`.
