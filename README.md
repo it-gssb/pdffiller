@@ -157,6 +157,7 @@ One supported use case is the student enrollment notification for a family, whic
 
 #### Enabling Grouping
 
+<<<<<<< HEAD
 The PDF Filler tool allows grouping records using one Excel input column, which is the first column defined in the `excel.group_columns` property. Records are grouped based on the values in this column and created documents are sent to the the recipients in one email. PDF Filler continues to process Excel rows row-by-row if the group column is undefined.
 
 The property `excel.group_columns` define **all Excel columns** that are the same for a group of records. Columns defined in properties `excel.secret_column` and `excel.target_email_columns` are automatically included in the non-empty column list defined by property `excel.group_columns`.
@@ -171,12 +172,12 @@ The PDF form must have the following structure to be able to accept multiple rec
 
 For example, a PDF form could contain a table with four rows with each row referring to a different record for students class assignment. The column names are repeated with  postfixes `_1` to `_4` to represent entries for up to four records.
 
-*Student Name*       | *Teacher Name*       | *Class*       | *Room*
--------------------- | -------------------- | -------------------------------
-\[Student Name\_1\]  | \[Teacher Name\_1\]  | \[Class\_1\]  | \[Room\_1\]
-\[Student Name\_2\]  | \[Teacher Name\_2\]  | \[Class\_2\]  | \[Room\_2\]
-\[Student Name\_3\]  | \[Teacher Name\_3\]  | \[Class\_3\]  | \[Room\_3\]
-\[Student Name\_4\]  | \[Teacher Name\_4\]  | \[Class\_4\]  | \[Room\_4\]
+Student Name        | Teacher Name        | Class        | Room
+------------------- | ------------------- | ------------ | --------------
+\[Student Name\_1\] | \[Teacher Name\_1\] | \[Class\_1\] | \[Room\_1\]
+\[Student Name\_2\] | \[Teacher Name\_2\] | \[Class\_2\] | \[Room\_2\]
+\[Student Name\_3\] | \[Teacher Name\_3\] | \[Class\_3\] | \[Room\_3\]
+\[Student Name\_4\] | \[Teacher Name\_4\] | \[Class\_4\] | \[Room\_4\]
 
 The group column `Parent Name` may be used anywhere in the document as well.
 
