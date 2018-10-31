@@ -68,7 +68,7 @@ A configuration file defines all non-confidential settings of the application. C
 This section contains the configurations required to create PDF files from PDF form templates. 
 
 Configuration Key   | Mandatory | Description
---------------------| --------- | ---------------------------------------
+:-------------------| :-------- | :--------------------------------------
 excel.file\_name | Y | Name of the Excel xslx spreadsheet in the `sources` folder that contains the records to be merged. For each record one or multiple PDF files are created according to the configuration.
 excel.sheet\_name | Y | Name of the sheet in the excel spreadsheet with the records.
 excel.secret\_column | Y | Column in selected input sheet that contains the PDF encryption key.
@@ -125,7 +125,7 @@ Each group of choice definitions must use the same choice.\<name\> key prefix.
 
 
 Configuration Key          | Mandatory | Description
--------------------------- | --------- | ---------------------------------------
+:------------------------- | :-------- | :--------------------------------------
 choice.\<name\>.select | Y | A list of selection criteria \<value\> : \<alias\>. \<value\> defines the expected value and \<alias\> is the PDF file alias defined in the template.\<alias\> configuration.
 choice.\<name\>.selectcolumn | N | Column in the spreadsheet that defines the value used for selecting a PDF Form template. The default value is `Template`.
 choice.\<name\>.basename | N | Is used as the value of the system variable `_BaseName_`. The default value is the template file name without its type postfix. 
@@ -194,7 +194,7 @@ For each document included in the `template` definition PDF Filler determines if
 Generated PDF documents may be send to one or multiple recipients that are defined in the spreadsheet record used to generate the PDF documents. Each email subject and plain text body are generated using [Mustache](https://mustache.github.io/mustache.5.html) templates.
 
 Configuration Key            | Mandatory | Description
----------------------------- | --------- | ---------------------------------------
+:--------------------------- | :-------- | :--------------------------------------
 excel.target\_email\_columns | N | list of columns in selected sheet that contain email addresses. The default values are 'PrimaryEmail' and 'SecondaryEmail'.
 email.host | Y | smtp server name or IP address
 email.port | Y | smtp server port
