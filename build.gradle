@@ -90,10 +90,10 @@ dependencies {
     // command line
     compile group: 'commons-cli', name: 'commons-cli', version: '1.4'
     // commons configuration
-    compile group: 'org.apache.commons', name: 'commons-configuration2', version: '2.3'
+    compile group: 'org.apache.commons', name: 'commons-configuration2', version: '2.4'
     compile group: 'commons-beanutils', name: 'commons-beanutils', version: '1.9.3'
     // pdf
-    compile group: 'org.apache.pdfbox', name: 'pdfbox', version: '2.0.11'
+    compile group: 'org.apache.pdfbox', name: 'pdfbox', version: '2.0.12'
     // spreadsheet
     compile group: 'org.apache.poi', name: 'poi', version: '4.0.0'
     compile group: 'org.apache.poi', name: 'poi-ooxml', version: '4.0.0'
@@ -111,7 +111,7 @@ dependencies {
    
     testCompile "junit:junit:4.12"
     // https://mvnrepository.com/artifact/org.mockito/mockito-core
-    testCompile group: 'org.mockito', name: 'mockito-core', version: '2.22.0'
+    testCompile group: 'org.mockito', name: 'mockito-core', version: '2.23.0'
 }
 
 task srcZip(type: Zip) {
