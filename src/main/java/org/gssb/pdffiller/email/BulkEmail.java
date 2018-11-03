@@ -46,7 +46,8 @@ public class BulkEmail {
 
    private final static String EOL = System.getProperty("line.separator");
    
-   private static final String CHARACTER_SET = "utf-8";
+   // Define LATIN-1 as character set for email subject and body
+   private static final String CHARACTER_SET = "ISO-8859-1";
 
    private static final String MISSING_COLUMN =
          "The spreadsheet does not contain the columns %s that define " +
@@ -124,6 +125,7 @@ public class BulkEmail {
                                          final String userName,
                                          final String password) {
       Properties properties = new Properties();
+      properties.put("mail.mime.charset", CHARACTER_SET);
       properties.put("mail.smtp.host", host);
       properties.put("mail.smtp.port", port);
 
@@ -179,12 +181,12 @@ public class BulkEmail {
 
       msg.setRecipients(Message.RecipientType.TO, toAddresses);
       
-      msg.setSubject(subject, CHARACTER_SET);
+      msg.setSubject(subject);
       msg.setSentDate(new Date());
 
       // creates message part
       MimeBodyPart messageBodyPart = new MimeBodyPart();
-      messageBodyPart.setContent(body, "text/plain; charset=" + CHARACTER_SET);
+      messageBodyPart.setContent(body, "text/plain");
 
       // creates multi-part
       Multipart multipart = new MimeMultipart();
