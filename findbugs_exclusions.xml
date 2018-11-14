@@ -4,6 +4,10 @@
       <Bug code="Dm" />
    </Match>
    <Match>
+      <Class name="org.gssb.pdffiller.pdf.PdfFormFiller"/>
+      <Bug code="RCN" />
+   </Match>
+   <Match>
       <Class name="org.gssb.pdffiller.text.TextBuilder"/>
       <Bug code="Dm" />
    </Match>
