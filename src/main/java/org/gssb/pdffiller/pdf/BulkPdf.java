@@ -24,6 +24,7 @@ import org.apache.poi.EncryptedDocumentException;
 import org.apache.poi.openxml4j.exceptions.InvalidFormatException;
 import org.gssb.pdffiller.config.AppProperties;
 import org.gssb.pdffiller.excel.ColumnNotFoundException;
+import org.gssb.pdffiller.excel.ExcelCell;
 import org.gssb.pdffiller.excel.ExcelRow;
 import org.gssb.pdffiller.excel.RowGroup;
 import org.gssb.pdffiller.excel.ExcelReader;
@@ -255,7 +256,13 @@ public class BulkPdf {
       
       String optionValue;
       try {
-         optionValue = row.getValue(optionColumn).getColumnValue();
+         ExcelCell cell = row.getValue(optionColumn);
+		 if (cell==null) {
+	        String msg = "Choice column " + optionColumn + " is undefined.";
+	        logger.error(msg);
+	        throw new UnrecoverableException(msg);
+	     }	 
+         optionValue = cell.getColumnValue();
       } catch (ColumnNotFoundException e) {
          String msg = "Excel column name defined in choice does not exist.";
          logger.error(msg, e);
@@ -403,6 +410,16 @@ public class BulkPdf {
                                       final List<Template> alwaysInclude,
                                       final List<Choice> choices,
                                       final Map<String, Map<String, String>> formFieldMaps) {
+	   
+      String generateFolderPath = rootPath + File.separator + this.generatedFolder;
+      File generateFolder = new File(generateFolderPath);
+      if (!generateFolder.exists() && !generateFolder.mkdir()) {
+    	 String msg = String.format("Unable to cfreate directory %s.",
+    			                    generateFolderPath);
+    	 logger.error(msg);
+         throw new UnrecoverableException(msg);
+      }
+	   
       String excelPath = rootPath + File.separator + this.sourceFolder +
                          File.separator + this.excelInputFile;
       List<RowGroup> groups = createGroups(new File(excelPath), sheetName);
@@ -434,8 +451,7 @@ public class BulkPdf {
       }
       this.outstream.println();
       this.outstream.println("Created " + count + " files for " + groups.size() +
-                             " row groups with " + recordCount +
-                             " records.");
+                             " groups with " + recordCount + " records.");
       
       return resultSets;
    }
