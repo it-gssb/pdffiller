@@ -14,7 +14,7 @@ ext {
    versionProperties = file("${rootProject.projectDir.canonicalPath}/src/main/resources/version.properties")
    dayFormat = 'MM/dd/yyy'
    timeFormat = 'H:mm:ss z'
-   gradleVersionLocal = '4.9'
+   gradleVersionLocal = '4.10.2'
 }
 
 sourceCompatibility = 1.8
