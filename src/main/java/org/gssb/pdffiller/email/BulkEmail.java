@@ -279,11 +279,15 @@ public class BulkEmail {
    
    private String getRecipients(final Address[] addresses) {
       String addressText;
-      try {
-         addressText = getAddressList(addresses);
-      } catch (MessagingException e) {
-         logger.warn("Unable to get email addresses from message.", e);
-         addressText = "unknown email addresses";
+      if (addresses!=null) {
+         try {
+            addressText = getAddressList(addresses);
+         } catch (MessagingException e) {
+            logger.warn("Unable to get email addresses from message.", e);
+            addressText = "unknown email addresses";
+         }
+      } else {
+         addressText = "No email address";
       }
       return addressText;
    }

@@ -28,7 +28,11 @@ public class PdfFormFiller {
    private static final String NOT_PDF_ERROR = 
          "Error: Header doesn't contain versioninfo";
    private static final String NON_FORM_WARN = 
-         "The file '%s' does not contain a PDF form and will be copied as is.";
+         "File '%s' does not contain a PDF form and will be copied as is.";
+   private static final String ILLEGAL_CHAR_ERROR = 
+         "Error while filling value '%1$s' into form field '%2$s' in file %3$s. " +
+         "The most likely cause is an unsupported character in the suplied " +
+         "value. The file was not created.";
    
    private static final int    KEY_STRENGTH = 128;
    
@@ -50,7 +54,13 @@ public class PdfFormFiller {
    private void setField(final PDField field, final String value) 
                 throws IOException {
       assert(field != null);
-      field.setValue(value);
+      try {
+         field.setValue(value);
+      } catch(java.lang.IllegalArgumentException e) {
+         String msg = String.format("Error when assigning value to field %s.", 
+                                    field.getFullyQualifiedName());
+         throw new PdfUnsupportedCharacterException(msg, e, field, value);
+      }
 //    field.setReadOnly(true);
    }
 
@@ -191,7 +201,17 @@ public class PdfFormFiller {
          logFormFields(acroForm);
          
          acroForm.setNeedAppearances(false);
-         fillFormFields(formMap, formFieldMap, getPdfFieldMap(acroForm));
+         try {
+            fillFormFields(formMap, formFieldMap, getPdfFieldMap(acroForm));
+         } catch (PdfUnsupportedCharacterException e) {
+            // do not create file and close template
+            pdf.close();
+            String msg = String.format(ILLEGAL_CHAR_ERROR,  
+                                       e.getValue(), e.getFormField(),
+                                       targetPdf.getName());
+            logger.error(msg, e);
+            return;
+         }
          acroForm.flatten();
       
          if (masterKey!=null && !masterKey.isEmpty() && 
