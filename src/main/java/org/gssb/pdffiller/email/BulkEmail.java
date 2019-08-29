@@ -266,17 +266,6 @@ public class BulkEmail {
                                      .collect(Collectors.joining(", "));
    }
 
-   private String getRecipients(final Message message) {
-      String addresses;
-      try {
-         addresses = getAddressList(message.getAllRecipients());
-      } catch (MessagingException e) {
-         logger.warn("Unable to get email addresses from message.", e);
-         addresses = "unknown email addresses";
-      }
-      return addresses;
-   }
-   
    private String getRecipients(final Address[] addresses) {
       String addressText;
       if (addresses!=null) {
@@ -288,6 +277,17 @@ public class BulkEmail {
          }
       } else {
          addressText = "No email address";
+      }
+      return addressText;
+   }
+   
+   private String getRecipients(final Message message) {
+      String addressText;
+      try {
+         addressText = getRecipients(message.getAllRecipients());
+      } catch (MessagingException e) {
+         logger.warn("Unable to get email addresses from message.", e);
+         addressText = "unknown email addresses";
       }
       return addressText;
    }

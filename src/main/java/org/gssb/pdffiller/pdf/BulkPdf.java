@@ -7,6 +7,7 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -146,9 +147,18 @@ public class BulkPdf {
                    .collect(Collectors.groupingBy(r -> r.getValue(groupColumn)
                                                         .getColumnValue()));
       
+      Comparator<RowGroup> comp = 
+            (g1, g2) -> g1.getHeadRow()
+                          .getValue(groupColumn)
+                          .getColumnValue()
+                          .compareTo(g2.getHeadRow()
+                                       .getValue(groupColumn)
+                                       .getColumnValue());
+      
       return groups.entrySet()
                    .stream()
                    .map(l -> new RowGroup(l.getValue(), groupColumnSet))
+                   .sorted(comp)
                    .collect(Collectors.toList());
    }
    
