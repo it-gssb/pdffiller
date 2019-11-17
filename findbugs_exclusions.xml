@@ -1,11 +1,23 @@
 <FindBugsFilter>
    <Match>
       <Class name="org.gssb.pdffiller.BulkNotificator"/>
+      <Bug code="SECPTI" />
+   </Match>
+   <Match>
+      <Class name="org.gssb.pdffiller.BulkNotificator"/>
       <Bug code="Dm" />
+   </Match>
+   <Match>
+      <Class name="org.gssb.pdffiller.pdf.BulkPdf"/>
+      <Bug code="SECPTI" />
    </Match>
    <Match>
       <Class name="org.gssb.pdffiller.pdf.PdfFormFiller"/>
       <Bug code="RCN" />
+   </Match>
+   <Match>
+      <Class name="org.gssb.pdffiller.template.TemplateBuilder"/>
+      <Bug code="SECPTI" />
    </Match>
    <Match>
       <Class name="org.gssb.pdffiller.text.TextBuilder"/>

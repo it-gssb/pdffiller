@@ -1,20 +1,17 @@
-//
-// @author  $Author$
-// @version $Revision$
-// @date    $Date$
-//
-apply plugin: 'java'
-apply plugin: 'eclipse'
-apply plugin: 'application'
-apply plugin: 'findbugs'
-apply plugin: 'project-report'
-apply plugin: 'com.github.ben-manes.versions'
+plugins {
+   id 'java'
+   id 'eclipse'
+   id 'application'
+   id "com.github.spotbugs" version "2.0.1"
+   id 'project-report'
+   id "com.github.ben-manes.versions" version "0.27.0"
+}
 
 ext {
    versionProperties = file("${rootProject.projectDir.canonicalPath}/src/main/resources/version.properties")
    dayFormat = 'MM/dd/yyy'
    timeFormat = 'H:mm:ss z'
-   gradleVersionLocal = '4.10.2'
+   gradleVersionLocal = '6.0'
 }
 
 sourceCompatibility = 1.8
@@ -25,19 +22,6 @@ version = readVersionInfo(versionProperties)
 mainClassName = "org.gssb.pdffiller.BulkNotificator"
 group = "org.gssb"
 
-buildscript {
-   repositories {
-      mavenCentral() 
-      jcenter()
-      maven {
-        url 'http://dl.bintray.com/content/djmijares/gradle-plugins'
-      }
-    }
-
-    dependencies {
-        classpath 'com.github.ben-manes:gradle-versions-plugin:0.20.0'
-   }
-}
 
 configurations {
     testArtifacts
@@ -86,12 +70,12 @@ repositories {
 
 dependencies {
     // https://mvnrepository.com/artifact/org.apache.commons/commons-collections4
-    compile group: 'org.apache.commons', name: 'commons-collections4', version: '4.2'
+    compile group: 'org.apache.commons', name: 'commons-collections4', version: '4.4'
     // command line
     compile group: 'commons-cli', name: 'commons-cli', version: '1.4'
     // commons configuration
-    compile group: 'org.apache.commons', name: 'commons-configuration2', version: '2.4'
-    compile group: 'commons-beanutils', name: 'commons-beanutils', version: '1.9.3'
+    compile group: 'org.apache.commons', name: 'commons-configuration2', version: '2.6'
+    compile group: 'commons-beanutils', name: 'commons-beanutils', version: '1.9.4'
     // pdf
     compile group: 'org.apache.pdfbox', name: 'pdfbox', version: '2.0.12'
     // spreadsheet
@@ -104,14 +88,16 @@ dependencies {
     compile group: 'com.sun.mail', name: 'javax.mail', version: '1.6.2'
     compile group: 'com.sun.mail', name: 'smtp', version: '1.6.2'
     // https://mvnrepository.com/artifact/com.github.spullara.mustache.java/compiler
-    compile group: 'com.github.spullara.mustache.java', name: 'compiler', version: '0.9.5'
+    compile group: 'com.github.spullara.mustache.java', name: 'compiler', version: '0.9.6'
 
-    compile group: 'org.apache.logging.log4j', name: 'log4j-api', version: '2.11.1'
-    compile group: 'org.apache.logging.log4j', name: 'log4j-core', version: '2.11.1'
+    compile group: 'org.apache.logging.log4j', name: 'log4j-api', version: '2.12.1'
+    compile group: 'org.apache.logging.log4j', name: 'log4j-core', version: '2.12.1'
    
     testCompile "junit:junit:4.12"
     // https://mvnrepository.com/artifact/org.mockito/mockito-core
     testCompile group: 'org.mockito', name: 'mockito-core', version: '2.23.0'
+    
+    spotbugsPlugins 'com.h3xstream.findsecbugs:findsecbugs-plugin:1.7.1'
 }
 
 task srcZip(type: Zip) {
@@ -130,7 +116,7 @@ test {
    forkEvery = 4
 }
 
- tasks.withType(FindBugs) {
+ tasks.withType(com.github.spotbugs.SpotBugsTask) {
      ignoreFailures = false
      excludeFilter = file('findbugs_exclusions.xml')
      reports {
@@ -138,28 +124,7 @@ test {
          html.enabled = true
      }
  }
-
-task sourceSetJavaProperties << {
-	sourceSets {
-
-		xmlExtensions {
-			println "java.srcDirs = ${java.srcDirs}"
-			println "resources.srcDirs = ${resources.srcDirs}"
-			println "java.files = ${java.files.name}"
-			println "allJava.files = ${allJava.files.name}"
-			println "resources.files = ${resources.files.name}"
-			println "allSource.files = ${allSource.files.name}"
-			println "output.classesDir = ${output.classesDir}"
-			println "output.resourcesDir = ${output.resourcesDir}"
-			println "output.files = ${output.files}"
-			println "compileClasspath = ${compileClasspath}"
-			compileClasspath.each {
-				println it
-			}
-		}
-	}
-}
-    
+   
  //include all licenses of sub-project
  applicationDistribution.from('src/main/resources/licenses/runtime') {
    into "licences"
@@ -205,35 +170,6 @@ startScripts {
    }
 }
 
-def fixWindowsStartScript(writer, lines) {
-	lines.eachWithIndex { line, i ->
-		if (line =~ /^set CLASSPATH=%APP_HOME%/) {
-			writer.println line
-			writer.println "set CLASSPATH=%CLASSPATH%;%APP_HOME%\\lib\\*"
-			writer.println ''
-         writer.println "set DEFAULT_JVM_OPTS=\"-Dlog4j.configurationFile=%~dp0/../conf/log4j2.xml\""
-			writer.println ''
-		} else {
-			writer.println line
-		}
-	}
-}
-
-def fixUnixStartScript(writer, lines) {
-	lines.eachWithIndex { line, i ->
-	    if (line =~ /^CLASSPATH=\$/) {
-			writer.println line
-			writer.println ''
-			writer.println "CLASSPATH=\$CLASSPATH:\$APP_HOME/lib/*"
-			writer.println ''
-         writer.println "DEFAULT_JVM_OPTS=\"-Dlog4j.configurationFile=\${0%/*}/../conf/log4j2.xml\""
-			writer.println ''
-		} else {
-			writer.println line
-		}
-	}
-}
-	
 task forceTest( ) {
    dependsOn cleanTest, test
 }
@@ -254,26 +190,10 @@ gradle.taskGraph.whenReady { TaskExecutionGraph graph ->
    }
 }
    
-task incrementMajorVersion(group: 'versioning', description: 'Increments the product.version.major number stored in the version.properties file') << {
-   ant.propertyfile(file: versionProperties){
-      entry(key: 'product.version.major', type: 'int', operation: '+', value: 1)
+task incrementBuildNumber(group: 'versioning', description: 'Increments the build.number number stored in the version.properties file') {
+   doLast {
+      updateTransientVersionProperties()
    }
-}
-
-task incrementMinorVersion(group: 'versioning', description: 'Increments the product.version.minor number stored in the version.properties file') << {
-   ant.propertyfile(file: versionProperties){
-      entry(key: 'product.version.minor', type: 'int', operation: '+', value: 1)
-   }
-}
-
-task incrementPatchVersion(group: 'versioning', description: 'Increments the product.version.patch number stored in the version.properties file') << {
-   ant.propertyfile(file: versionProperties){
-      entry(key: 'product.version.patch', type: 'int', operation: '+', value: 1)
-   }
-}
-
-task incrementBuildNumber(group: 'versioning', description: 'Increments the build.number number stored in the version.properties file') << {
-   updateTransientVersionProperties()
 }
 
 void updateTransientVersionProperties() {
@@ -294,12 +214,14 @@ void updateTransientVersionProperties() {
    }
 }
 
-task release(group: 'versioning', description: 'A marker task that triggers updating of the build.isRelease property in the version.properties file to true', dependsOn: 'distZip') << {
-   updateBuildRelease(true)
+task release(group: 'versioning', description: 'A marker task that triggers updating of the build.isRelease property in the version.properties file to true', dependsOn: 'distZip') {
+   doLast {
+      updateBuildRelease(true)
+   }
 }
 
 void updateBuildRelease(Boolean value) {
-   ant.propertyfile(file: versionProperties){
+   ant.propertyfile(file: versionProperties) {
       entry(key: 'build.isRelease', operation: '=', value: value)
    }
 }
@@ -354,11 +276,42 @@ VersionInfo readVersionInfo(propertiesFile) {
          props.'build.isRelease'.toBoolean())
 }
 
-task printVersion(group: 'versioning', description: 'Prints versioning info as persisted in the version.properties file') << {
-   println "Major Version: $version.major"
-   println "Minor Version: $version.minor"
-   println "Patch Version: $version.patch"
-   println "Build Number: $version.buildNumber"
-   println "Build Day: $version.buildDay"
-   println "Build Time: $version.buildTime"
+task printVersion(group: 'versioning', description: 'Prints versioning info as persisted in the version.properties file') {
+   doLast {
+	   println "Major Version: $version.major"
+	   println "Minor Version: $version.minor"
+	   println "Patch Version: $version.patch"
+	   println "Build Number: $version.buildNumber"
+	   println "Build Day: $version.buildDay"
+	   println "Build Time: $version.buildTime"
+	}
+}
+
+def fixWindowsStartScript(writer, lines) {
+	lines.eachWithIndex { line, i ->
+		if (line =~ /^set CLASSPATH=%APP_HOME%/) {
+			writer.println line
+			writer.println "set CLASSPATH=%CLASSPATH%;%APP_HOME%\\lib\\*"
+			writer.println ''
+         writer.println "set DEFAULT_JVM_OPTS=\"-Dlog4j.configurationFile=%~dp0/../conf/log4j2.xml\""
+			writer.println ''
+		} else {
+			writer.println line
+		}
+	}
+}
+
+def fixUnixStartScript(writer, lines) {
+	lines.eachWithIndex { line, i ->
+	    if (line =~ /^CLASSPATH=\$/) {
+			writer.println line
+			writer.println ''
+			writer.println "CLASSPATH=\$CLASSPATH:\$APP_HOME/lib/*"
+			writer.println ''
+         writer.println "DEFAULT_JVM_OPTS=\"-Dlog4j.configurationFile=\${0%/*}/../conf/log4j2.xml\""
+			writer.println ''
+		} else {
+			writer.println line
+		}
+	}
 }
