@@ -144,7 +144,7 @@ public class BulkNotificator {
                            config.emailPassword, bodyTemplateText);
    }
 	
-   	public void run(final String[] args) {
+   public void run(final String[] args) {
       try {
          TemplateBuilder choiceBuilder = 
                createTemplateBuilderImpl(this.config, this.properties);

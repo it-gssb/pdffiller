@@ -136,12 +136,11 @@ public class BulkPdf {
       if (this.groupColumns==null || this.groupColumns.isEmpty() ||
           allRows.get(0).getValue(this.groupColumns.get(0)) == null) {
          return allRows.stream()
-                       .map(r -> new RowGroup(Arrays.asList(r), Collections.emptySet()))
+                       .map(r -> new RowGroup(null, Arrays.asList(r)))
                        .collect(Collectors.toList());
       }
       
       String groupColumn = this.groupColumns.get(0);
-      Set<String> groupColumnSet = new HashSet<>(this.groupColumns);
       Map<String, List<ExcelRow>> groups =
             allRows.stream()
                    .collect(Collectors.groupingBy(r -> r.getValue(groupColumn)
@@ -157,7 +156,7 @@ public class BulkPdf {
       
       return groups.entrySet()
                    .stream()
-                   .map(l -> new RowGroup(l.getValue(), groupColumnSet))
+                   .map(l -> new RowGroup(groupColumn, l.getValue()))
                    .sorted(comp)
                    .collect(Collectors.toList());
    }
@@ -424,8 +423,8 @@ public class BulkPdf {
       String generateFolderPath = rootPath + File.separator + this.generatedFolder;
       File generateFolder = new File(generateFolderPath);
       if (!generateFolder.exists() && !generateFolder.mkdir()) {
-    	 String msg = String.format("Unable to cfreate directory %s.",
-    			                    generateFolderPath);
+    	 String msg = String.format("Unable to create directory %s.",
+    			                      generateFolderPath);
     	 logger.error(msg);
          throw new UnrecoverableException(msg);
       }

@@ -89,14 +89,11 @@ public class ExcelReader {
    
    private ExcelRow createRow(final FormulaEvaluator evaluator,
                               final Row currentRow, final List<String> header) {
-      int columnNumber = 0;
       ExcelRow excelRow = new ExcelRow();
-      for (Cell cell : currentRow) {
-         assert(columnNumber < header.size());
-         String cellValue = getValue(cell, evaluator);
-         excelRow.addExcelCell(new ExcelCell(columnNumber, header.get(columnNumber),
-                                             cellValue));
-         columnNumber++;
+      for (int i=0; i < header.size(); i++) {
+         Cell cell = currentRow.getCell(i);
+         String value = cell!=null ? getValue(cell, evaluator) : "";
+         excelRow.addExcelCell(new ExcelCell(i, header.get(i), value));
       }
       return excelRow;
    }

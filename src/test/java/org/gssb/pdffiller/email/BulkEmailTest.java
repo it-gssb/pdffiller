@@ -13,9 +13,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 
 import javax.mail.Address;
 import javax.mail.BodyPart;
@@ -130,12 +128,12 @@ public class BulkEmailTest {
       return excelRow;
    }
    
-   private RowGroup createRowGroup(final String[] columns,
+   private RowGroup createRowGroup(final String groupIdName,
+                                   final String[] columns,
                                    final List<String> columnNames) {
       List<ExcelRow> rows = new ArrayList<>();
       rows.add(createExcelRow(columns));
-      Set<String> columnSet = new HashSet<>(columnNames);
-      return new RowGroup(rows, columnSet);
+      return new RowGroup(groupIdName, rows);
    }
    
    private String getTextFromMimeMultipart(final MimeMultipart mimeMultipart)
@@ -211,9 +209,10 @@ public class BulkEmailTest {
       
       RowGroup rowGroup;
       if (oneRecipient) {
-         rowGroup = createRowGroup(rowDesc, Arrays.asList("email1"));
+         rowGroup = createRowGroup(null, rowDesc, Arrays.asList("email1"));
       } else {
-         rowGroup = createRowGroup(rowDesc, Arrays.asList("email1", "email2"));
+         rowGroup = createRowGroup("email1", rowDesc,
+                                   Arrays.asList("email1", "email2"));
       }
       
       List<UnitOfWork> work = new ArrayList<>();
@@ -339,7 +338,7 @@ public class BulkEmailTest {
       } catch (UnrecoverableException e) {
          assertTrue(e.getCause() instanceof BulkEmailException);
          assertTrue(e.getCause().getCause() instanceof MessagingException);
-         assertEquals("Unable to send email after 3 retries.",
+         assertEquals("Unable to send email for group ID p1@domain1.ccc after 3 atempts.",
                       e.getMessage());
       }
       String data = new String(baos.toByteArray(), StandardCharsets.UTF_8);

@@ -35,6 +35,7 @@ import org.apache.logging.log4j.Logger;
 import org.gssb.pdffiller.config.AppProperties;
 import org.gssb.pdffiller.excel.RowGroup;
 import org.gssb.pdffiller.exception.UnrecoverableException;
+import org.gssb.pdffiller.pdf.MessageWrapper;
 import org.gssb.pdffiller.pdf.UnitOfWork;
 import org.gssb.pdffiller.text.TextBuilder;
 
@@ -69,21 +70,28 @@ public class BulkEmail {
          "The email message to be sent to %s contains an undefined variable.";
 
    private static final String UNKNOWN_ERROR =
-         "Email server was unable to deliver message in record %s to %s " +
-         "due to an unknown issue. The email was not sent.";
+         "Email server was unable to deliver message in record %s and " +
+         "group ID %s to %s due to an unknown issue. The email was not sent.";
 
    private static final String SERVER_ERROR = 
-         "Email server was unable to deliver message of record %s to %s. " +
-         "The email was not sent.";
+         "Email server was unable to deliver message of record %s and " +
+         "groups ID %s to %s. The email was not sent.";
    
    private static final String CONNECTION_ERROR =
          "Unable to connect to email server after %s retries.";
    
    private static final String EMAIL_SENT =
-         "Sent message of record %s to email addresses %s.";
+         "Sent message of record %s with group ID %s to email addresses %s.";
+   
+   private static final String UNABLE_TO_SEND_EMAIL =
+         "Unable to send email for group ID %s after %d atempts.";
 
    private static final String SEND_ERROR = 
-         "Emails sent to '%s' and emails not delivered to '%s'.";
+         "Emails sent to '%s' and emails not delivered to '%s' for " +
+         "record with groups ID %s.";
+   
+   private static final String NOT_LOGGED = 
+         "Could not log email addresses '%s' for record with group ID %s.";
 
    private final PrintStream outstream;
    
@@ -292,26 +300,30 @@ public class BulkEmail {
       return addressText;
    }
 
-   private int sendMessage(final Transport t, final Message message,
+   private int sendMessage(final Transport t, final MessageWrapper wrappedMessage,
                            final int index, final int alreadyProcessed) {
       int successCode = 0; // no error
+      final Message message = wrappedMessage.getMessage();
       try {
          message.saveChanges();
          t.sendMessage(message, message.getAllRecipients());
       } catch (SendFailedException e) {
          String msg = String.format(SEND_ERROR, 
                                     getRecipients(e.getValidSentAddresses()),
-                                    getRecipients(e.getValidUnsentAddresses()));
+                                    getRecipients(e.getValidUnsentAddresses()),
+                                    wrappedMessage.getGroudId());
          logger.error(msg, e);
          // unable to send to at least one address
          successCode = e.getValidUnsentAddresses().length;
       } catch (MessagingException e) {
          String msg = String.format(SERVER_ERROR, alreadyProcessed + index,
+                                    wrappedMessage.getGroudId(),
                                     getRecipients(message));
          logger.error(msg, e);
-         throw new BulkEmailException(msg, e, index);
+         throw new BulkEmailException(msg, e, index, wrappedMessage.getGroudId());
       } catch (RuntimeException e) {
          String msg = String.format(UNKNOWN_ERROR, alreadyProcessed + index,
+                                    wrappedMessage.getGroudId(),
                                     getRecipients(message));
          logger.error(msg, e);
          throw new UnrecoverableException(msg, e);
@@ -320,25 +332,28 @@ public class BulkEmail {
    }
    
    private int sendMessages(final Session session,
-                            final List<Message> messages,
+                            final List<MessageWrapper> messages,
                             final int alreadyProcessed) {
       int processed = 0;
       int sentEmails = 0;
       try (Transport t = getTransport(session, this.emailSendProtocol)) {
          for (int i=0; i < messages.size(); i++) {
-            Message message = messages.get(i);
-            int successCode = sendMessage(t, message, i, alreadyProcessed);
+            MessageWrapper wrapedMessage = messages.get(i);
+            Message message = wrapedMessage.getMessage();
+            int successCode = sendMessage(t, wrapedMessage, i, alreadyProcessed);
             processed++;
             if (successCode == 0) {
                sentEmails++;
                printProgress(alreadyProcessed + processed, '.');
                try {
                   String msg = String.format(EMAIL_SENT, alreadyProcessed + i,
+                                             wrapedMessage.getGroudId(),
                                              getAddressList(message.getAllRecipients()));
                   logger.info(msg);
                } catch (MessagingException e) {
-                  logger.debug("Could not log email address for record " + 
-                               sentEmails);
+                  String msg = String.format(NOT_LOGGED, sentEmails,
+                                             messages.get(i).getGroudId());
+                  logger.debug(msg, e);
                }
             } else {
                // at least one email recipient was not reached
@@ -356,9 +371,9 @@ public class BulkEmail {
    }
 
    private int sendMessagesWithRetry(final Session session,
-                                      final List<Message> messages) {
+                                     final List<MessageWrapper> messages) {
       int emailsSent = 0;
-      Exception lastException = null;
+      BulkEmailException lastException = null;
       int retriedCount = 0;
       int messageIndex = 0;
       while (retriedCount < this.retries) {
@@ -386,7 +401,8 @@ public class BulkEmail {
             logger.debug("Done waiting before attempting to connect to email server.");
          }
       }
-      String msg = "Unable to send email after " + retries + " retries.";
+      String msg = String.format(UNABLE_TO_SEND_EMAIL, lastException.getGroupId(),
+                                 retries);
       logger.error(msg, lastException);
       throw new UnrecoverableException(msg, lastException);
    }
@@ -511,19 +527,20 @@ public class BulkEmail {
                           final String password, 
                           final String bodyTemplateText) {
       Session session = createSession(host, port, userName, password);
-      List<Message> messages = new ArrayList<>();
+      List<MessageWrapper> messages = new ArrayList<>();
 
       TextBuilder textBuilder = new TextBuilder();
       
       this.outstream.println();
+
       for (UnitOfWork unit : createdUnits) {
          RowGroup group = unit.getRow();
+         String groupId = group.getGroupId().orElse("<group ID not configured>");
          List<File> attachedFiles = unit.getGeneratedFiles();
          
          List<String> emails = getValidEmailAddresses(group);
          if (emails.isEmpty()) {
-            logger.warn("No email sent for '" +
-                        group.getHeadRow().getValue("Name").getColumnValue() + 
+            logger.warn("No email sent for group ID '" + groupId + 
                         "' because the required email address was unavailable.");
             continue;
          }
@@ -545,26 +562,28 @@ public class BulkEmail {
          String subject = createSubjectMessage(textBuilder, group, recipients);
          String message = createEmailBodyMessage(textBuilder, bodyTemplateText,
                                                  group, recipients);
-         Optional<Message> msg;
+         Optional<Message> emailMessage;
          try {
-            msg = createMessage(session, userName, fromAddress, emails,
-                                subject, message, attachedFiles);
-            if (!msg.isPresent()) {
+            emailMessage = createMessage(session, userName, fromAddress, emails,
+                                         subject, message, attachedFiles);
+            if (!emailMessage.isPresent()) {
                continue;
             }
          } catch (MessagingException e) {
-            logger.error("Unable to create message", e);
+            String msg = String.format("Unable to create message for groupId %s.",
+                                        groupId);
+            logger.error(msg, e);
             continue;
          }
-         messages.add(msg.get());
+         messages.add(new MessageWrapper(groupId, emailMessage.get()));
       }
 
       // send messages
       if (simulate) {
-         for (Message m : messages) {
-            logger.info(renderMessage(m));
+         for (MessageWrapper m : messages) {
+            logger.info(renderMessage(m.getMessage()));
          }
-      } else {
+      } else if (!messages.isEmpty()) {
          int emailsSent = sendMessagesWithRetry(session, messages);
          this.outstream.println();
          this.outstream.println("Sent " + emailsSent + " of " +
