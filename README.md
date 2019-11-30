@@ -276,13 +276,13 @@ This creates distribution in `pdffiller/build/distributions/pdffiller-<version n
 
 PDF Filler has the following runtime dependencies on third party open source components:
 
-* Apache PdfBox 2.0.12 and its two dependencies Apache Fontbox 2.0.12 and Commons Logging 1.2
+* Apache PdfBox 2.0.17 and its two dependencies Apache Fontbox 2.0.17 and Commons Logging 1.2
 * Commons Command Line Interface 1.4
-* Apache Configuration 2.4 and dependencies on Apache Commons Lang 3.9, Commons Beanutils 1.9.4, Commons Logging 1.2, and Commons Collections 3.2.2
-* Apache POI 4.0.0 and dependencies on Apache Commons Collections4 4.4 and Apache Commons Codec 1.10, Apache Commons Math3 3.6.1.
-* Apache POI OOXML 4.0.0 and dependencies on Apache POI OOXML Schemas 4.0.0, Apache XML Beans 3.0.1, Apache Commons Compress 1.18, Virtuald Curves API 1.04
+* Apache Configuration 2.4 and dependencies on Apache Commons Lang 3.9, Commons Beanutils 1.9.4, Commons Logging 1.2, Commons Collections 3.2.2, and Apache Commons Text 1.8
+* Apache POI 4.1.1 and dependencies on Apache Commons Collections4 4.4 and Apache Commons Codec 1.10, Apache Commons Math3 3.6.1.
+* Apache POI OOXML 4.1.1 and dependencies on Apache POI OOXML Schemas 4.1.1, Apache XML Beans 3.0.1, Apache Commons Compress 1.18, Virtuald Curves API 1.04
 * Javax Mail 1.6.2 and dependency on Javax Activation 1.1
-* Sun SMTP 1.6.2 and dependencies on Sun Mail API 1.6.2 and Javax Activation 1.1
+* Sun SMTP 1.6.4 and dependencies on Sun Mail API 1.6.4 and Javax Activation 1.1
 * Spullara Mustache Java compiler 0.9.6
 * Apache Log4j 2.12.1
 

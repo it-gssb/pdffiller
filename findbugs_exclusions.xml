@@ -8,6 +8,10 @@
       <Bug code="Dm" />
    </Match>
    <Match>
+      <Class name="org.gssb.pdffiller.email.BulkEmail"/>
+      <Bug code="SECSMTP" />
+   </Match>
+   <Match>
       <Class name="org.gssb.pdffiller.pdf.BulkPdf"/>
       <Bug code="SECPTI" />
    </Match>
@@ -26,6 +30,10 @@
    <Match>
       <Class name="org.gssb.pdffiller.text.TextBuilder"/>
       <Bug code="OBL" />
+   </Match>
+   <Match>
+      <Class name="org.gssb.pdffiller.text.TextBuilder"/>
+      <Bug code="SECSMTP" />
    </Match>
    <Match>
       <Class name="org.gssb.pdffiller.BulkNotificator"/>

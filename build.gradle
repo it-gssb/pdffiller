@@ -2,7 +2,7 @@ plugins {
    id 'java'
    id 'eclipse'
    id 'application'
-   id "com.github.spotbugs" version "2.0.1"
+   id "com.github.spotbugs" version "3.0.0"
    id 'project-report'
    id "com.github.ben-manes.versions" version "0.27.0"
 }
@@ -11,7 +11,7 @@ ext {
    versionProperties = file("${rootProject.projectDir.canonicalPath}/src/main/resources/version.properties")
    dayFormat = 'MM/dd/yyy'
    timeFormat = 'H:mm:ss z'
-   gradleVersionLocal = '6.0'
+   gradleVersionLocal = '6.0.1'
 }
 
 sourceCompatibility = 1.8
@@ -77,16 +77,16 @@ dependencies {
     compile group: 'org.apache.commons', name: 'commons-configuration2', version: '2.6'
     compile group: 'commons-beanutils', name: 'commons-beanutils', version: '1.9.4'
     // pdf
-    compile group: 'org.apache.pdfbox', name: 'pdfbox', version: '2.0.12'
+    compile group: 'org.apache.pdfbox', name: 'pdfbox', version: '2.0.17'
     // spreadsheet
-    compile group: 'org.apache.poi', name: 'poi', version: '4.0.0'
-    compile group: 'org.apache.poi', name: 'poi-ooxml', version: '4.0.0'
+    compile group: 'org.apache.poi', name: 'poi', version: '4.1.1'
+    compile group: 'org.apache.poi', name: 'poi-ooxml', version: '4.1.1'
     // https://mvnrepository.com/artifact/org.apache.commons/commons-math3
     compile group: 'org.apache.commons', name: 'commons-math3', version: '3.6.1'
      
     // mail
     compile group: 'com.sun.mail', name: 'javax.mail', version: '1.6.2'
-    compile group: 'com.sun.mail', name: 'smtp', version: '1.6.2'
+    compile group: 'com.sun.mail', name: 'smtp', version: '1.6.4'
     // https://mvnrepository.com/artifact/com.github.spullara.mustache.java/compiler
     compile group: 'com.github.spullara.mustache.java', name: 'compiler', version: '0.9.6'
 
@@ -95,9 +95,9 @@ dependencies {
    
     testCompile "junit:junit:4.12"
     // https://mvnrepository.com/artifact/org.mockito/mockito-core
-    testCompile group: 'org.mockito', name: 'mockito-core', version: '2.23.0'
+    testCompile group: 'org.mockito', name: 'mockito-core', version: '3.2.0'
     
-    spotbugsPlugins 'com.h3xstream.findsecbugs:findsecbugs-plugin:1.7.1'
+    spotbugsPlugins 'com.h3xstream.findsecbugs:findsecbugs-plugin:1.10.1'
 }
 
 task srcZip(type: Zip) {
