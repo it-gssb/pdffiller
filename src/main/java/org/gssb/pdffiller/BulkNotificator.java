@@ -8,6 +8,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 import org.apache.commons.cli.BasicParser;
@@ -40,6 +41,7 @@ public class BulkNotificator {
 	   boolean simulate      = false;
 	   String  emailPassword = "";
 	   String  masterKey     = "";
+	   Optional<String> groupId = Optional.empty();
 	}
 	
    private static final String CHARACTER_SET = "utf-8";
@@ -160,10 +162,12 @@ public class BulkNotificator {
          List<UnitOfWork> createdUnits;
          try {
             createdUnits = 
-               this.bulkPdf.createPdfs(this.config.root,
-                                       this.properties.getExcelSheetName(),
-                                       this.config.masterKey, secretColumnName,
-                                       alwaysInclude, choices, formFieldMaps);
+               this.bulkPdf
+                   .createPdfs(this.config.root, 
+                               this.properties.getExcelSheetName(),
+                               this.config.masterKey, secretColumnName,
+                               alwaysInclude, choices, formFieldMaps,
+                               config.groupId, false);
          } catch (ColumnNotFoundException e) {
             String msg = String.format(INCORRECT_SECRET_COLUMN,
                                        secretColumnName);
@@ -230,11 +234,13 @@ public class BulkNotificator {
             config.masterKey = NO_ENCRYPTION;
          }
 
-         if (args.length == 2 || args.length == 4 && cmd.hasOption("m")) {
-            // this implies that only PDF documents are produced
-            return config;
+         
+         if (cmd.hasOption("g")) {
+            config.groupId = Optional.of(cmd.getOptionValue("g"));
+         } else {
+            config.groupId = Optional.empty();
          }
-
+         
          if (cmd.hasOption("p")) {
             config.emailPassword = cmd.getOptionValue("p");
          } else {
@@ -257,7 +263,9 @@ public class BulkNotificator {
 	/**
 	 * Configuration:
 	 * 
-	 * -c /Users/username/Documents/GSSB/tools/pdffiller/src/test/resources/2018 [-m **master-key***] [-p ***pwd***] [-s]
+	 * -c *** path to configuration file *** 
+	 * [-m *** master-key ***] [-p *** password ***]
+	 * [-g *** groupID ***] [-s]
 	 * 
 	 * @param args
 	 */
@@ -265,8 +273,9 @@ public class BulkNotificator {
 	   options.addOption("h", "help", false, "Show help.");
       options.addOption("c", "configuration", true,
                         "Configuration file for PDF Mail Merge application.");
-      options.addOption("p", "password", true, "Email account user password.");
+      options.addOption("g", "groupid", true, "groupID from which processing is started.");
       options.addOption("m", "master-key", true, "Master key for PDF encryption");
+      options.addOption("p", "password", true, "User password for email account.");
       options.addOption("s", "suppress", false, "Logs email instead of sending them.");
       
       Configuration config = parse(args);

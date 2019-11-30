@@ -127,7 +127,9 @@ public class BulkPdf {
       }
    }
    
-   private List<RowGroup> groupRows(final List<ExcelRow> allRows) {
+   private List<RowGroup> groupRows(final List<ExcelRow> allRows,
+                                    final Optional<String> groupId,
+                                    final boolean singleRecord) {
       if (allRows.isEmpty()) {
          return Collections.emptyList();
       }
@@ -154,18 +156,35 @@ public class BulkPdf {
                                        .getValue(groupColumn)
                                        .getColumnValue());
       
-      return groups.entrySet()
+       List<RowGroup> groupRows =
+             groups.entrySet()
                    .stream()
                    .map(l -> new RowGroup(groupColumn, l.getValue()))
                    .sorted(comp)
                    .collect(Collectors.toList());
+       
+       List<RowGroup> resultRows = new ArrayList<>();
+       boolean foundFirst = !groupId.isPresent();
+       for (RowGroup rowGroup : groupRows) {
+          foundFirst = foundFirst ||
+                       groupId.isPresent() &&
+                       rowGroup.getGroupId().isPresent() &&
+                       rowGroup.getGroupId().get().equals(groupId.get());
+          if (foundFirst) {
+             resultRows.add(rowGroup);
+          }
+       }
+       return resultRows;
    }
    
    protected List<RowGroup> createGroups(final File excelFile,
-                                         final String sheetName) {
+                                         final String sheetName,
+                                         final Optional<String> startGroupId,
+                                         final boolean singleRecord) {
       List<RowGroup> groups = null;
       try {
-         groups = groupRows(this.rowReader.read(excelFile, sheetName));
+         groups = groupRows(this.rowReader.read(excelFile, sheetName),
+                            startGroupId, singleRecord);
       } catch (EncryptedDocumentException e) {
          String msg = "PDF Template is encrypted.";
          logger.error(msg, e);
@@ -418,20 +437,23 @@ public class BulkPdf {
                                       final String secretColumnName,
                                       final List<Template> alwaysInclude,
                                       final List<Choice> choices,
-                                      final Map<String, Map<String, String>> formFieldMaps) {
+                                      final Map<String, Map<String, String>> formFieldMaps,
+                                      final Optional<String> startGroupId,
+                                      final boolean singleRecord) {
 	   
-      String generateFolderPath = rootPath + File.separator + this.generatedFolder;
-      File generateFolder = new File(generateFolderPath);
+      String generatedFolderPath = rootPath + File.separator + this.generatedFolder;
+      File generateFolder = new File(generatedFolderPath);
       if (!generateFolder.exists() && !generateFolder.mkdir()) {
-    	 String msg = String.format("Unable to create directory %s.",
-    			                      generateFolderPath);
-    	 logger.error(msg);
+    	   String msg = String.format("Unable to create directory %s.",
+    			                        generatedFolderPath);
+    	   logger.error(msg);
          throw new UnrecoverableException(msg);
       }
 	   
       String excelPath = rootPath + File.separator + this.sourceFolder +
                          File.separator + this.excelInputFile;
-      List<RowGroup> groups = createGroups(new File(excelPath), sheetName);
+      List<RowGroup> groups = createGroups(new File(excelPath), sheetName,
+                                           startGroupId, singleRecord);
       
       if (masterKey != null && !masterKey.isEmpty() && 
           !secretColumnName.isEmpty() && !groups.isEmpty() &&

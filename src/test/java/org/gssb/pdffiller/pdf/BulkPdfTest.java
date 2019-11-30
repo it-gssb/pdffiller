@@ -212,7 +212,8 @@ public class BulkPdfTest extends PDFValidator {
       
       List<UnitOfWork> uows =
          this.bulkPdf.createPdfs(ROOT, "Dummy", MASTER_KEY, "secret", 
-                                 alwaysInclude, choices, fieldMaps);
+                                 alwaysInclude, choices, fieldMaps,
+                                 Optional.empty(), false);
       assertEquals(3, uows.size());
       
       int i=0;
@@ -258,7 +259,8 @@ public class BulkPdfTest extends PDFValidator {
       
       List<UnitOfWork> uows =
          this.bulkPdf.createPdfs(ROOT, "Dummy", MASTER_KEY, "secret", 
-                                 alwaysInclude, choices, fieldMaps);
+                                 alwaysInclude, choices, fieldMaps,
+                                 Optional.empty(), false);
       assertEquals(1, uows.size());
       
       

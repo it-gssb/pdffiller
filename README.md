@@ -246,6 +246,10 @@ Adding the email account password with option `-p password-email-account` trigge
 ```
 Please ensure that you properly configure email server, port, account, subject, and body in the properties file before attempting to send emails.
 
+Documents are prepared and emails are delivered in an alpha-numerical order based on the first group column in  property `excel.group_columns ` of the property file if it is defined. Adding the group column value option `-g start group column value` restricts preparation of PDF documents and email delivery to the record with the defined group column value and all subsequent records.
+
+This option is helpful to restart the delivery of emails in the event of unexpected email failure.
+
 During the development of a mail merge project it may be helpful to avoid sending emails.
 Using the command line option `-s` results in emails being logged without sending them.
 

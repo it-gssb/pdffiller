@@ -189,7 +189,7 @@ public class BulkEmail {
 
       msg.setRecipients(Message.RecipientType.TO, toAddresses);
       
-      msg.setSubject(subject);
+      msg.setSubject(subject.replaceAll(EOL, ""));
       msg.setSentDate(new Date());
 
       // creates message part
