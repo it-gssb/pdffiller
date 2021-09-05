@@ -54,6 +54,7 @@ public class AppProperties extends AbstractConfiguration {
    
    private final static String EMAIL_SUBJECT_MESSAGE        = "email.subject";
    private final static String EMAIL_BODY_MESSAGE_FILE      = "email.body_file";
+   private final static String EMAIL_MESSAGE_ENCODING       = "email.message_encoding";
    
    private final static String FILE_NAME_TEMPLATE           = "file.name_template";
    
@@ -123,7 +124,7 @@ public class AppProperties extends AbstractConfiguration {
    public List<String> getTargetEmailColumns() {
       List<String> values = getPropertyList(XLS_TARGET_EMAIL_COLUMNS_KEY);
       if (values==null || values.isEmpty()) {
-         return XLS_TARGET_EMAIL_COLUMNS_DEFAULT;
+         return new ArrayList<>(XLS_TARGET_EMAIL_COLUMNS_DEFAULT);
       }
       return Collections.unmodifiableList(values);
    }
@@ -220,6 +221,11 @@ public class AppProperties extends AbstractConfiguration {
    
    public String getEmailBodyFile() {
       return getMandatoryProperty(EMAIL_BODY_MESSAGE_FILE);
+   }
+   
+   public String getMessageEncoding() {
+      var value = getProperty(EMAIL_MESSAGE_ENCODING);
+      return value != null && value.equals("plain") ? value : "html";
    }
    
    //

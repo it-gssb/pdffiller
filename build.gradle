@@ -1,20 +1,21 @@
 plugins {
    id 'java'
    id 'eclipse'
+   id 'idea'
    id 'application'
-   id "com.github.spotbugs" version "3.0.0"
+//   id "com.github.spotbugs" version "4.7.3"
    id 'project-report'
-   id "com.github.ben-manes.versions" version "0.27.0"
+   id "com.github.ben-manes.versions" version "0.39.0"
 }
 
 ext {
    versionProperties = file("${rootProject.projectDir.canonicalPath}/src/main/resources/version.properties")
    dayFormat = 'MM/dd/yyy'
    timeFormat = 'H:mm:ss z'
-   gradleVersionLocal = '6.0.1'
+   gradleVersionLocal = '6.7.1'
 }
 
-sourceCompatibility = 1.8
+sourceCompatibility = 1.11
 
 // Load version info during configuration phase
 version = readVersionInfo(versionProperties)
@@ -63,7 +64,7 @@ task testJar (type: Jar) {
    from sourceSets.test.output
 }
 
-repositories { 
+repositories {
    mavenCentral()
    jcenter()
 }
@@ -74,30 +75,35 @@ dependencies {
     // command line
     compile group: 'commons-cli', name: 'commons-cli', version: '1.4'
     // commons configuration
-    compile group: 'org.apache.commons', name: 'commons-configuration2', version: '2.6'
+    compile group: 'org.apache.commons', name: 'commons-configuration2', version: '2.7'
     compile group: 'commons-beanutils', name: 'commons-beanutils', version: '1.9.4'
     // pdf
-    compile group: 'org.apache.pdfbox', name: 'pdfbox', version: '2.0.17'
+    compile group: 'org.apache.pdfbox', name: 'pdfbox', version: '2.0.24'
     // spreadsheet
-    compile group: 'org.apache.poi', name: 'poi', version: '4.1.1'
-    compile group: 'org.apache.poi', name: 'poi-ooxml', version: '4.1.1'
+    compile group: 'org.apache.poi', name: 'poi', version: '5.0.0'
+    compile group: 'org.apache.poi', name: 'poi-ooxml', version: '5.0.0'
     // https://mvnrepository.com/artifact/org.apache.commons/commons-math3
     compile group: 'org.apache.commons', name: 'commons-math3', version: '3.6.1'
-     
+
     // mail
     compile group: 'com.sun.mail', name: 'javax.mail', version: '1.6.2'
     compile group: 'com.sun.mail', name: 'smtp', version: '1.6.4'
     // https://mvnrepository.com/artifact/com.github.spullara.mustache.java/compiler
-    compile group: 'com.github.spullara.mustache.java', name: 'compiler', version: '0.9.6'
+    compile group: 'com.github.spullara.mustache.java', name: 'compiler', version: '0.9.10'
 
-    compile group: 'org.apache.logging.log4j', name: 'log4j-api', version: '2.12.1'
-    compile group: 'org.apache.logging.log4j', name: 'log4j-core', version: '2.12.1'
-   
-    testCompile "junit:junit:4.12"
+    compile group: 'org.apache.logging.log4j', name: 'log4j-api', version: '2.14.1'
+    compile group: 'org.apache.logging.log4j', name: 'log4j-core', version: '2.14.1'
+
+    testCompile "junit:junit:4.13.2"
     // https://mvnrepository.com/artifact/org.mockito/mockito-core
-    testCompile group: 'org.mockito', name: 'mockito-core', version: '3.2.0'
-    
-    spotbugsPlugins 'com.h3xstream.findsecbugs:findsecbugs-plugin:1.10.1'
+    testCompile group: 'org.mockito', name: 'mockito-core', version: '3.12.1'
+
+//    spotbugs 'com.github.spotbugs:spotbugs:4.4.0'
+
+//    spotbugsPlugins 'com.h3xstream.findsecbugs:findsecbugs-plugin:1.7.1'
+
+    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.7.0'
+    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.7.0'
 }
 
 task srcZip(type: Zip) {
@@ -107,38 +113,42 @@ task srcZip(type: Zip) {
 }
 
 test {
+   useJUnitPlatform()
    exclude 'org/gssb/pdffiller/**/AllTests.class'
-  
+
    //disable as potentially we have a concurrency issue in test cases
    maxParallelForks = 1
-   // each test is run by parallel agent; rational is that we have a number of  
+   // each test is run by parallel agent; rational is that we have a number of
    // large test cases that require a long execution time with lot's of I/O
    forkEvery = 4
 }
 
- tasks.withType(com.github.spotbugs.SpotBugsTask) {
-     ignoreFailures = false
-     excludeFilter = file('findbugs_exclusions.xml')
-     reports {
-         xml.enabled = false
-         html.enabled = true
-     }
- }
-   
+//spotbugsMain {
+//    ignoreFailures = false
+//    excludeFilter = file('findbugs_exclusions.xml')
+//    reports {
+//        html {
+//            enabled = true
+//            destination = file("$buildDir/reports/spotbugs/main/spotbugs.html")
+//            stylesheet = 'fancy-hist.xsl'
+//        }
+//    }
+//}
+
  //include all licenses of sub-project
  applicationDistribution.from('src/main/resources/licenses/runtime') {
    into "licences"
    include "**"
 }
- 
+
 applicationDistribution.from('src/main/dist') {into "/"}
 applicationDistribution.from('src/main/resources') {
    into "conf"
    include "*.properties"
    include "*.xml"
 }
-applicationDistribution.from('src/bin') { 
-   into "bin" 
+applicationDistribution.from('src/bin') {
+   into "bin"
    include "*.sh"
    include "*.bat"
 }
@@ -165,7 +175,7 @@ startScripts {
       unixScript.withPrintWriter { writer ->
          fixUnixStartScript(writer, lines)
       }
-      
+
       System.properties['line.separator'] = eolSave
    }
 }
@@ -173,7 +183,7 @@ startScripts {
 task forceTest( ) {
    dependsOn cleanTest, test
 }
-   
+
    // version of build
 
 gradle.taskGraph.whenReady { TaskExecutionGraph graph ->
@@ -189,7 +199,7 @@ gradle.taskGraph.whenReady { TaskExecutionGraph graph ->
       }
    }
 }
-   
+
 task incrementBuildNumber(group: 'versioning', description: 'Increments the build.number number stored in the version.properties file') {
    doLast {
       updateTransientVersionProperties()
@@ -266,7 +276,7 @@ VersionInfo readVersionInfo(propertiesFile) {
    propertiesFile.withInputStream { it ->
       props.load(it)
    }
-   
+
    new VersionInfo(props.'product.version.major'.toInteger(),
          props.'product.version.minor'.toInteger(),
          props.'product.version.patch'.toInteger(),

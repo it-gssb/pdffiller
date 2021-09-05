@@ -97,6 +97,8 @@ public class BulkEmail {
    
    private final String emailSendProtocol;
    
+   private final AppProperties props;
+   
    private final int retries;
    private final int waitTime;
    private final int timeout;
@@ -113,6 +115,7 @@ public class BulkEmail {
       this.emailColumns = props.getTargetEmailColumns();
       this.subjectTemplate = props.getEmailSubjectMessage();
       this.emailSendProtocol = "smtp";
+      this.props = props;
       this.outstream = outstream;
    }
    
@@ -194,7 +197,9 @@ public class BulkEmail {
 
       // creates message part
       MimeBodyPart messageBodyPart = new MimeBodyPart();
-      messageBodyPart.setContent(body, "text/plain");
+      var encoding = this.props.getMessageEncoding();
+      var type = "text/" + encoding.trim();
+      messageBodyPart.setContent(body, type);
 
       // creates multi-part
       Multipart multipart = new MimeMultipart();
