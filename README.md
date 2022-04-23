@@ -269,7 +269,7 @@ that reflect the sample records in sheet 'Testergebnisse' in spreadsheet `$PROJE
 
 # Build
 
-Download and install the most recent [Java SE Development Kit 1.8](http://www.oracle.com/technetwork/java/javase/downloads/jdk8-downloads-2133151.html).
+Download and install the most recent [Java SE Development Kit 11](https://www.oracle.com/java/technologies/javase/jdk11-archive-downloads.html).
 
 Clone the [PDF Filler](https://github.com/it-gssb/pdffiller.git) repository using your IDE or the Git [command line tool](https://git-scm.com/downloads).
 
