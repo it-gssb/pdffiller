@@ -14,7 +14,7 @@ Tool to support bulk PDF Mail Merge / PDF Filler using data in Excel spreadsheet
 
 # Installation
 
-Download and install the latest [Java SE Runtime Environment 1.8](http://www.oracle.com/technetwork/java/javase/downloads/jre8-downloads-2133155.html).
+Download and install the latest [Java SE Runtime Environment 11](https://www.oracle.com/java/technologies/javase/jdk11-archive-downloads.html).
 
 Download the latest released version  `pdffiller-0.1.3.zip` of the [PDF Filler application](https://github.com/it-gssb/pdffiller/releases) and unzip it in the location of your choice. 
 
@@ -269,7 +269,7 @@ that reflect the sample records in sheet 'Testergebnisse' in spreadsheet `$PROJE
 
 # Build
 
-Download and install the most recent [Java SE Development Kit 1.8](http://www.oracle.com/technetwork/java/javase/downloads/jdk8-downloads-2133151.html).
+Download and install the most recent [Java SE Development Kit 11](https://www.oracle.com/java/technologies/javase/jdk11-archive-downloads.html).
 
 Clone the [PDF Filler](https://github.com/it-gssb/pdffiller.git) repository using your IDE or the Git [command line tool](https://git-scm.com/downloads).
 
