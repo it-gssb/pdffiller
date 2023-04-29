@@ -1,0 +1,17 @@
+<FindBugsFilter>
+   <Match>
+      <Class name="org.gssb.pdffiller.email.MockTransport"/>
+      <Bug code="EI" />
+   </Match>
+   <Match>
+      <Class name="org.gssb.pdffiller.email.MockTransport"/>
+      <Bug code="EI2" />
+   </Match>
+
+   <Match>
+      <Class name="~.*\.*Test"/>
+      <Not>
+         <Bug code="IJU" />
+      </Not>
+   </Match>
+</FindBugsFilter>

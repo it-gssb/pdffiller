@@ -1,6 +1,7 @@
 package org.gssb.pdffiller.pdf;
 
 import java.io.File;
+import java.util.Collections;
 import java.util.List;
 
 import org.gssb.pdffiller.excel.RowGroup;
@@ -20,7 +21,7 @@ public class UnitOfWork {
    }
 
    public List<File> getGeneratedFiles() {
-      return generatedFiles;
+      return Collections.unmodifiableList(generatedFiles);
    }
 
 }

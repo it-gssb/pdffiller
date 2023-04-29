@@ -12,6 +12,14 @@
       <Bug code="SECSMTP" />
    </Match>
    <Match>
+      <Class name="org.gssb.pdffiller.pdf.MessageWrapper"/>
+      <Bug code="EI" />
+   </Match>
+   <Match>
+      <Class name="org.gssb.pdffiller.pdf.MessageWrapper"/>
+      <Bug code="EI2" />
+   </Match>
+   <Match>
       <Class name="org.gssb.pdffiller.pdf.BulkPdf"/>
       <Bug code="SECPTI" />
    </Match>

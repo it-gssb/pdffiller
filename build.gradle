@@ -3,10 +3,18 @@ plugins {
    id 'eclipse'
    id 'idea'
    id 'application'
-//   id "com.github.spotbugs" version "4.7.3"
+   id "com.github.spotbugs" version "4.7.10"  
    id 'project-report'
-   id "com.github.ben-manes.versions" version "0.39.0"
+   id "com.github.ben-manes.versions" version "0.42.0"
+   id "org.owasp.dependencycheck" version "7.1.0.1"
 }
+
+// find newer versions for dependent libraries 
+// ./gradlew dependencyUpdates
+//
+// finds security vulnerabilities in dependent libraries
+// ./gradlew dependencyCheckAnalyze
+
 
 ext {
    versionProperties = file("${rootProject.projectDir.canonicalPath}/src/main/resources/version.properties")
@@ -73,15 +81,14 @@ dependencies {
     // https://mvnrepository.com/artifact/org.apache.commons/commons-collections4
     compile group: 'org.apache.commons', name: 'commons-collections4', version: '4.4'
     // command line
-    compile group: 'commons-cli', name: 'commons-cli', version: '1.4'
+    compile group: 'commons-cli', name: 'commons-cli', version: '1.5.0'
     // commons configuration
     compile group: 'org.apache.commons', name: 'commons-configuration2', version: '2.7'
-    compile group: 'commons-beanutils', name: 'commons-beanutils', version: '1.9.4'
     // pdf
-    compile group: 'org.apache.pdfbox', name: 'pdfbox', version: '2.0.24'
+    compile group: 'org.apache.pdfbox', name: 'pdfbox', version: '2.0.26'
     // spreadsheet
-    compile group: 'org.apache.poi', name: 'poi', version: '5.0.0'
-    compile group: 'org.apache.poi', name: 'poi-ooxml', version: '5.0.0'
+    compile group: 'org.apache.poi', name: 'poi', version: '5.2.2'
+    compile group: 'org.apache.poi', name: 'poi-ooxml', version: '5.2.2'
     // https://mvnrepository.com/artifact/org.apache.commons/commons-math3
     compile group: 'org.apache.commons', name: 'commons-math3', version: '3.6.1'
 
@@ -91,19 +98,19 @@ dependencies {
     // https://mvnrepository.com/artifact/com.github.spullara.mustache.java/compiler
     compile group: 'com.github.spullara.mustache.java', name: 'compiler', version: '0.9.10'
 
-    compile group: 'org.apache.logging.log4j', name: 'log4j-api', version: '2.14.1'
-    compile group: 'org.apache.logging.log4j', name: 'log4j-core', version: '2.14.1'
+    compile group: 'org.apache.logging.log4j', name: 'log4j-api', version: '2.17.2'
+    compile group: 'org.apache.logging.log4j', name: 'log4j-core', version: '2.17.2'
 
     testCompile "junit:junit:4.13.2"
     // https://mvnrepository.com/artifact/org.mockito/mockito-core
-    testCompile group: 'org.mockito', name: 'mockito-core', version: '3.12.1'
+    testCompile group: 'org.mockito', name: 'mockito-core', version: '4.5.1'
 
 //    spotbugs 'com.github.spotbugs:spotbugs:4.4.0'
 
-//    spotbugsPlugins 'com.h3xstream.findsecbugs:findsecbugs-plugin:1.7.1'
+//    spotbugsPlugins 'com.h3xstream.findsecbugs:findsecbugs-plugin:1.12.0'
 
-    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.7.0'
-    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.7.0'
+    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.8.2'
+    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.8.2'
 }
 
 task srcZip(type: Zip) {
@@ -123,17 +130,27 @@ test {
    forkEvery = 4
 }
 
-//spotbugsMain {
-//    ignoreFailures = false
-//    excludeFilter = file('findbugs_exclusions.xml')
-//    reports {
-//        html {
-//            enabled = true
-//            destination = file("$buildDir/reports/spotbugs/main/spotbugs.html")
-//            stylesheet = 'fancy-hist.xsl'
-//        }
-//    }
-//}
+spotbugsMain {
+    ignoreFailures = false
+    excludeFilter = file('findbugs_exclusions.xml')
+    reports {
+        html {
+            enabled = true
+            destination = file("$buildDir/reports/spotbugs/main/spotbugs.html")
+        }
+    }
+}
+
+spotbugsTest {
+    ignoreFailures = false
+    excludeFilter = file('findbugs_exclusions.test.xml')
+    reports {
+        html {
+            enabled = true
+            destination = file("$buildDir/reports/spotbugs/test/spotbugs.html")
+        }
+    }
+}
 
  //include all licenses of sub-project
  applicationDistribution.from('src/main/resources/licenses/runtime') {
