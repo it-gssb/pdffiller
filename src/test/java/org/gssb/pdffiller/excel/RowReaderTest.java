@@ -1,7 +1,10 @@
 package org.gssb.pdffiller.excel;
 
-import static org.junit.Assert.*;
-import static org.mockito.Mockito.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.fail;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import java.io.File;
 import java.io.IOException;
@@ -11,11 +14,10 @@ import java.util.List;
 import org.apache.poi.EncryptedDocumentException;
 import org.apache.poi.openxml4j.exceptions.InvalidFormatException;
 import org.gssb.pdffiller.config.AppProperties;
-import org.gssb.pdffiller.excel.ExcelReader;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 public class RowReaderTest {
-   
+
    private final static String EXCEL_FILE = "src/test/resources/2018/sources/GSSB Raw Results.xlsx";
    private final static String SHEET_NAME = "Testergebnisse";
 
@@ -28,7 +30,7 @@ public class RowReaderTest {
       when(props.getExcelSecretColumnName()).thenReturn("Key");
       return props;
    }
-   
+
    @Test
    public void testReadSample() {
       AppProperties props = createMockProperties();
@@ -44,9 +46,9 @@ public class RowReaderTest {
          e.printStackTrace();
          fail("unexpected exception");
       }
-      
+
       assertNotNull(excelRows);
-      assertEquals("incorrect count", 5, excelRows.size());
+      assertEquals(5, excelRows.size(), "incorrect count");
 
 //      System.err.println(excelRows.get(0).printHeaders());
 //      for (ExcelRow row : excelRows) {

@@ -1,6 +1,6 @@
 package org.gssb.pdffiller.pdf;
 
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.File;
 import java.io.IOException;
@@ -19,7 +19,7 @@ public class PDFValidator {
       super();
    }
 
-   protected void validatePDFDocument(final File templatePdf, 
+   protected void validatePDFDocument(final File templatePdf,
                                       final String password,
                                       final List<String> expected)
                   throws InvalidPasswordException, IOException {
@@ -40,9 +40,9 @@ public class PDFValidator {
       pdfStripper.setStartPage(1);
       pdfStripper.setEndPage(1);
       String parsedText = pdfStripper.getText(pdDoc);
-      
+
       expected.forEach(
-            s -> assertTrue("expected '" + s + "'", parsedText.contains(s)));
+            s -> assertTrue(parsedText.contains(s)));
       pdf.close();
    }
 
