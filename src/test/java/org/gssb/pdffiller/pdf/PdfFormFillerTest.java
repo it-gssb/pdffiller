@@ -1,6 +1,7 @@
 package org.gssb.pdffiller.pdf;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.File;
 import java.io.IOException;
@@ -11,8 +12,7 @@ import java.util.List;
 import org.apache.pdfbox.pdmodel.encryption.InvalidPasswordException;
 import org.gssb.pdffiller.excel.ExcelCell;
 import org.gssb.pdffiller.excel.ExcelRow;
-import org.gssb.pdffiller.pdf.PdfFormFiller;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 public class PdfFormFillerTest extends PDFValidator {
 
@@ -25,19 +25,19 @@ public class PdfFormFillerTest extends PDFValidator {
       }
       return row;
    }
-   
+
    @Test
    public void testCreatePdf() {
       String originalPdf = "src/test/resources/2018/sources/AATG Raw Score.pdf";
       String targetPdf   = "src/test/resources/2018/generated/Leo Test.pdf";
       String masterKey   = "MASTER";
       String secret      = "abc";
-      
-      List<String> keys = 
+
+      List<String> keys =
             Arrays.asList(new String[]{"Klasse", "Name", "LehrerIn", "Level",
                                        "Points_out_of_100", "Listening_and_Viewing",
                                        "Reading", "Percentile"});
-      List<String> values = 
+      List<String> values =
             Arrays.asList(new String[]{"6B", "Sasson, Leo", "Mr. Cool", "02",
                                        "43", "21", "22", "N/A"});
 
@@ -48,9 +48,9 @@ public class PdfFormFillerTest extends PDFValidator {
       if (targetFile.exists()) {
          targetFile.delete();
       }
-      
+
       try {
-         filler.populateAndCopy(pdfTemplate, targetFile, row.getRowMap(), masterKey, 
+         filler.populateAndCopy(pdfTemplate, targetFile, row.getRowMap(), masterKey,
                                 Collections.emptyMap(), secret);
       } catch (InvalidPasswordException e) {
          e.printStackTrace();
@@ -59,18 +59,18 @@ public class PdfFormFillerTest extends PDFValidator {
          e.printStackTrace();
          fail();
       }
-      
+
       assertTrue(targetFile.exists());
-      
+
       try {
-         List<String> expected = Arrays.asList(new String[] 
-               {"Sasson, Leo", "6B", "Mr. Cool", 
+         List<String> expected = Arrays.asList(new String[]
+               {"Sasson, Leo", "6B", "Mr. Cool",
                 "02", "21", "22", "43", "N/A"});
          validatePDFDocument(targetFile, secret, expected);
       } catch (IOException e) {
          e.printStackTrace();
          fail("Unexpected exception while inspecting generated PDF");
-      } 
+      }
    }
 
 }
